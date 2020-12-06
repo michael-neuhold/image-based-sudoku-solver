@@ -132,3 +132,6 @@ dmypy.json
 
 # visual studio code workspace
 sudoku-solver.code-workspace
+
+# images
+images/
