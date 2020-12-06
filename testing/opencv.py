@@ -2,18 +2,23 @@ import cv2
 import numpy as np
 import os
 
+# read image
 img = cv2.imread(os.path.dirname(os.path.abspath(__file__)) +
                  '/../images/sudoku1.png')
 
+# apply some filters
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-edges = cv2.Canny(gray, 90, 150, apertureSize=3)
+edges = cv2.Canny(gray, 90, 150, apertureSize=5)
 kernel = np.ones((3, 3), np.uint8)
 edges = cv2.dilate(edges, kernel, iterations=1)
 kernel = np.ones((5, 5), np.uint8)
 edges = cv2.erode(edges, kernel, iterations=1)
+
+# save filtered image (canny.jpg)
 cv2.imwrite(os.path.dirname(os.path.abspath(__file__)) +
             '/../images/canny.jpg', edges)
 
+# apply HoughLines
 lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
 
 if not lines.any():
@@ -81,8 +86,6 @@ for line in filtered_lines:
 
     cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
+# print image with highlighted, detected lines
 cv2.imwrite(os.path.dirname(os.path.abspath(__file__)) +
             '/../images/hough.jpg', img)
-#cv2.imshow('image', img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
