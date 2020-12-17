@@ -8,8 +8,56 @@ dirname  = os.path.dirname(__file__)
 input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
+
+img = cv2.imread(
+            os.path.join(input_dir, 'sudoku_001.jpeg')
+        )
+
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+float_gray = gray.astype(np.float32) / 255.0
+
+blur = cv2.GaussianBlur(float_gray, (0, 0), sigmaX=2, sigmaY=2)
+num = float_gray - blur
+
+blur = cv2.GaussianBlur(num*num, (0, 0), sigmaX=4, sigmaY=4)
+den = cv2.pow(blur, 0.5)
+
+gray = num / den
+
+cv2.normalize(gray, dst=gray, alpha=0.0, beta=1.0, norm_type=cv2.NORM_MINMAX)
+
+cv2.imwrite(
+        os.path.join(output_dir, 'norm.jpeg'),
+        gray * 255
+    )
+
+
+
+exit()
+
+
 img_path = os.path.join(input_dir, 'sudoku_001.jpeg')
 img = cv2.imread(img_path)
+
+gray = cv2.equalizeHist(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+cv2.imwrite(os.path.join(output_dir, 'adapt.jpg'), gray)  
+
+
+
+
+converted = cv2.cvtColor(img, cv2.COLOR_BGR2HSV_FULL)
+
+saturation = cv2.split(converted)[1]
+value =  255 - cv2.split(converted)[2]
+
+result = 255 - cv2.multiply(saturation, value, scale=1/255)
+cv2.imwrite(os.path.join(output_dir, 'a.jpg'), saturation)  
+cv2.imwrite(os.path.join(output_dir, 'b.jpg'), value)  
+cv2.imwrite(os.path.join(output_dir, 'test.jpg'), result)  
+
+
+exit()
 
 height, width, _ = img.shape
 fy = 512
@@ -23,46 +71,32 @@ fx = int(round((fy/height) * width))
 # cv2.imwrite(os.path.join(output_dir, 'downsampled.jpg'), img)  
 
 # blur
-blurred = cv2.GaussianBlur(img, (17, 17), 0)
-
-# loop over the image, pixel by pixel
-sum = 0
-for y in range(0, height):
-    for x in range(0, width):
-        # threshold the pixel
-        color = blurred[y, x] * (1/255)
-        r, g, b = color
-        d0 = 1-abs(r-b)
-        d1 = 1-abs(b-g)
-        d2 = 1-abs(g-r)
-        val = int((1-pow(d0*d1*d2, 1/3)) * 255)
-        sum += val
-        blurred[y, x] = [val, val, val]
-avg = sum / (width*height)
-
-for y in range(0, height):
-    for x in range(0, width):
-        val, _, _ =  blurred[y, x]
-        val -= avg
-        val = max(0, val)
-        blurred[y, x] = [val, val, val]
-
+blurred = cv2.GaussianBlur(img, (21, 21), 0)
 cv2.imwrite(os.path.join(output_dir, 'gaussian.jpg'), blurred)  
 
 
 # apply some filters
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-edges = cv2.Canny(img, 90, 150, apertureSize=5)
-kernel = np.ones((3, 3), np.uint8)
-edges = cv2.dilate(edges, kernel, iterations=3)
-kernel = np.ones((3, 3), np.uint8)
-edges = cv2.erode(edges, kernel, iterations=4)
+r, g, b = cv2.split(blurred)
+edges0 = cv2.Canny(r, 300, 900, apertureSize=5, L2gradient=True)
+edges1 = cv2.Canny(g, 300, 900, apertureSize=5)
+edges2 = cv2.Canny(b, 300, 900, apertureSize=5)
+
 
 # save filtered image (canny.jpg)
-cv2.imwrite(os.path.join(output_dir, 'canny.jpg'), edges)
+cv2.imwrite(os.path.join(output_dir, 'canny0.jpg'), edges0)
+cv2.imwrite(os.path.join(output_dir, 'canny1.jpg'), edges1)
+cv2.imwrite(os.path.join(output_dir, 'canny2.jpg'), edges2)
+
+result = cv2.multiply(edges0, edges1)
+result = cv2.multiply(result, edges2)
+kernel = np.ones((3, 3), np.uint8)
+edges = cv2.dilate(result, kernel, iterations=4)
+edges = cv2.erode(edges, kernel, iterations=4)
+cv2.imwrite(os.path.join(output_dir, 'mul.jpg'), edges)
+
 
 # apply HoughLines
-lines = cv2.HoughLines(edges, rho=1, theta=np.pi/360, threshold=410)
+lines = cv2.HoughLines(edges0, rho=1, theta=np.pi/360, threshold=200)
 
 
 if not lines.any():
