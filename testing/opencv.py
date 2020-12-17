@@ -1,4 +1,4 @@
-from math import sqrt
+from math import pi, sqrt
 import cv2
 import numpy as np
 import os
@@ -190,23 +190,116 @@ y2 = int(y0 - 1000*(a))
 cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
 # print image with highlighted, detected lines
+edge_points = { 0: [], 1:[], 2: [], 3: [], 4: [] } #...
 
-for hline in list(horizontal_lines[0]):
-    for vline in list(vertical_lines[0]):
+for hindex, hline in enumerate(horizontal_lines):
+    points = []
+    for vindex, vline in enumerate(vertical_lines):
         vrho, vtheta = vline[0]
         hrho, htheta = hline[0]
 
-        # (vrho - y * sin(vtheta)) / cos(vtheta) = x
-        # hrho = x * cos(htheta) + y * sin(htheta)
+        # rh = x * cos(th) + y * sin(th)
+        # rv = x * cos(tv) + y * sin(tv)
+       
+        # (rh - y * sin(th)) / cos(th) = x
+        # rv = x * cos(tv) + y * sin(tv)
 
-        y = ((vrho* np.cos(htheta) / np.cos(vtheta) - hrho) / 
-             (np.sin(vtheta) * np.cos(htheta) / np.cos(vtheta) + np.sin(htheta)))
+        y = (vrho - (hrho * np.cos(vtheta) / np.cos(htheta))) / (np.sin(vtheta) - np.sin(htheta) * np.cos(vtheta) / np.cos(htheta))
+        x = (hrho - y * np.sin(htheta)) / np.cos(htheta)
 
-        x = (vrho - y * np.sin(vtheta)) / np.cos(vtheta)
+        # print(f'x: {x} | y: {y}')
+        # h, w = downsampled.shape
+        # cv2.circle(downsampled, (int(x), int(y)), 1, color=255, thickness=3)
+        points.append((x, y, hindex, vindex))
+        
+    xsum = 0
+    ysum = 0
+    for point in points:
+        xsum += point[0]
+        ysum += point[1]
+    xavg = xsum / len(points)
+    yavg = ysum / len(points)
 
-        print(f'x: {x} | y: {y}')
-        h, w = downsampled.shape
-        cv2.circle(downsampled, (int(h - y), int(w -x)), 10, color=255)
+    xdsum = 0
+    ydsum = 0
+    for point in points:
+        xd = point[0] - xavg
+        xd = xd*xd
+        yd = point[1] - yavg
+        yd = yd*yd
+        xdsum += xd
+        ydsum += yd
+    
+    stdevy = sqrt(ydsum)
+    stdevx = sqrt(xdsum)
+    print('stddev: ', stdevx, stdevy)
+
+    min = points[0]
+    max = points[0]
+    if stdevx > stdevy:
+        for point in points:
+            if point[0] < min[0]:
+                min = point
+            if point[0] > max[0]:
+                max = point
+    else:
+        for point in points:
+            if point[1] < min[1]:
+                min = point
+            if point[1] > max[1]:
+                max = point
+
+    # print('min: ', min)
+    # print('max: ', max)
+    edge_points[min[3]].append(min)
+    edge_points[max[3]].append(max)
+    # cv2.circle(downsampled, (int(min[0]), int(min[1])), 1, color=255, thickness=3)
+    # cv2.circle(downsampled, (int(max[0]), int(max[1])), 1, color=255, thickness=3)
+
+for points in edge_points.values():
+    if len(points) <= 0: continue
+
+    xsum = 0
+    ysum = 0
+    for point in points:
+        xsum += point[0]
+        ysum += point[1]
+    xavg = xsum / len(points)
+    yavg = ysum / len(points)
+
+    xdsum = 0
+    ydsum = 0
+    for point in points:
+        xd = point[0] - xavg
+        xd = xd*xd
+        yd = point[1] - yavg
+        yd = yd*yd
+        xdsum += xd
+        ydsum += yd
+    
+    stdevy = sqrt(ydsum)
+    stdevx = sqrt(xdsum)
+    print('stddev: ', stdevx, stdevy)
+
+    min = points[0]
+    max = points[0]
+    if stdevx > stdevy:
+        for point in points:
+            if point[0] < min[0]:
+                min = point
+            if point[0] > max[0]:
+                max = point
+    else:
+        for point in points:
+            if point[1] < min[1]:
+                min = point
+            if point[1] > max[1]:
+                max = point
+
+    cv2.circle(downsampled, (int(min[0]), int(min[1])), 1, color=255, thickness=3)
+    cv2.circle(downsampled, (int(max[0]), int(max[1])), 1, color=255, thickness=3)
+
+# cv2.getPerspectiveTransform()
 
 cv2.imwrite(os.path.join(output_dir, 'hough.jpg'), downsampled)
 
