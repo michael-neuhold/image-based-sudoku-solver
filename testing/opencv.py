@@ -20,7 +20,7 @@ def downsample(img):
     downsampled = cv2.resize(gray, # original image
                     (fx, fy), # set fx and fy, not the final size
                     interpolation=cv2.INTER_CUBIC)
-    return downsampled
+    return downsampled, (512 / height)
 
 def get_edges(img):
     # cv2.imwrite(os.path.join(output_dir, 'downsampled.jpg'), downsampled)  
@@ -79,7 +79,7 @@ def get_biggest_connected_component(img):
 img = cv2.imread(
         os.path.join(input_dir, 'sudoku_001.jpeg'))
 
-downsampled = downsample(img)
+downsampled, scalef = downsample(img)
 edge_img  = get_edges(downsampled)
 component = get_biggest_connected_component(edge_img)
 
@@ -256,6 +256,7 @@ for hindex, hline in enumerate(horizontal_lines):
     # cv2.circle(downsampled, (int(min[0]), int(min[1])), 1, color=255, thickness=3)
     # cv2.circle(downsampled, (int(max[0]), int(max[1])), 1, color=255, thickness=3)
 
+corner_points = []
 for points in edge_points.values():
     if len(points) <= 0: continue
 
@@ -298,9 +299,32 @@ for points in edge_points.values():
 
     cv2.circle(downsampled, (int(min[0]), int(min[1])), 1, color=255, thickness=3)
     cv2.circle(downsampled, (int(max[0]), int(max[1])), 1, color=255, thickness=3)
+    corner_points.append(min)
+    corner_points.append(max)
 
-# cv2.getPerspectiveTransform()
+# transform
+
+# Locate points of the documents or object which you want to transform 
+
+height, width = downsampled.shape
+pts2 = np.float32([
+    [0, 512-1],
+    [512-1, 512-1],
+    [0, 0], 
+    [512-1, 0],
+    ]) 
+pts1 = np.float32([
+    *map(lambda p: [p[0] / scalef, p[1] / scalef], corner_points)
+]) 
+      
+# Apply Perspective Transform Algorithm 
+matrix = cv2.getPerspectiveTransform(pts1, pts2) 
 
 cv2.imwrite(os.path.join(output_dir, 'hough.jpg'), downsampled)
+
+output = cv2.warpPerspective(img, matrix, (512, 512))
+
+cv2.imwrite(os.path.join(output_dir, 'done.jpg'), output)
+
 
 
