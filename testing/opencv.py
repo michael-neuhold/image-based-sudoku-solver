@@ -77,7 +77,7 @@ def get_biggest_connected_component(img):
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_001.jpeg'))
+        os.path.join(input_dir, 'sudoku_006.jpg'))
 
 downsampled, scalef = downsample(img)
 edge_img  = get_edges(downsampled)
@@ -87,7 +87,7 @@ cv2.imwrite(os.path.join(output_dir, 'component.jpg'), component)
 
 
 # apply HoughLines
-lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=300)
+lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=220)
 
 
 if not lines.any():
@@ -163,31 +163,17 @@ for line1 in filtered_lines:
         vertical_lines.append(line1)
 
 
-for line in horizontal_lines:
+for line in filtered_lines:
     rho, theta = line[0]
-    print(theta)
-
-
-rho, theta = horizontal_lines[0][0]
-a = np.cos(theta)
-b = np.sin(theta)
-x0 = a*rho
-y0 = b*rho
-x1 = int(x0 + 1000*(-b))
-y1 = int(y0 + 1000*(a))
-x2 = int(x0 - 1000*(-b))
-y2 = int(y0 - 1000*(a))
-cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
-rho, theta = vertical_lines[0][0]
-a = np.cos(theta)
-b = np.sin(theta)
-x0 = a*rho
-y0 = b*rho
-x1 = int(x0 + 1000*(-b))
-y1 = int(y0 + 1000*(a))
-x2 = int(x0 - 1000*(-b))
-y2 = int(y0 - 1000*(a))
-cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    a = np.cos(theta)
+    b = np.sin(theta)
+    x0 = a*rho
+    y0 = b*rho
+    x1 = int(x0 + 1000*(-b))
+    y1 = int(y0 + 1000*(a))
+    x2 = int(x0 - 1000*(-b))
+    y2 = int(y0 - 1000*(a))
+    cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
 # print image with highlighted, detected lines
 edge_points = { 0: [], 1:[], 2: [], 3: [], 4: [] } #...
