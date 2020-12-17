@@ -9,94 +9,85 @@ input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
 
-img = cv2.imread(
-            os.path.join(input_dir, 'sudoku_001.jpeg')
+def downsample(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    height, width, _ = img.shape
+    fy = 512
+    fx = int( round((fy/height) * width) )
+
+    # downsample
+    downsampled = cv2.resize(gray, # original image
+                    (fx, fy), # set fx and fy, not the final size
+                    interpolation=cv2.INTER_CUBIC)
+    return downsampled
+
+def get_edges(img):
+    # cv2.imwrite(os.path.join(output_dir, 'downsampled.jpg'), downsampled)  
+
+    # blur
+    blurred = cv2.medianBlur(img, ksize=3)
+    # cv2.imwrite(os.path.join(output_dir, 'median.jpg'), blurred)  
+
+    # apply some filters
+    sobel_x = cv2.Sobel(blurred, cv2.CV_32F, 1, 0)
+    sobel_y = cv2.Sobel(blurred, cv2.CV_32F, 0, 1)
+    sobel_x = cv2.multiply(sobel_x, sobel_x)
+    sobel_y = cv2.multiply(sobel_y, sobel_y)
+    sobel = cv2.add(sobel_x, sobel_y)
+    sobel = cv2.sqrt(sobel)
+    sobel = sobel / sobel.max() * 255
+
+    _, sobel = cv2.threshold(sobel, 50, 255, type=cv2.THRESH_BINARY)
+
+    # cv2.imwrite(os.path.join(output_dir, 'sobel.jpg'), sobel)  
+
+    sobel = sobel.astype('uint8')
+
+    kernel = np.ones((3, 3), np.uint8)
+    dilated = cv2.dilate(sobel, kernel, iterations=1)
+    eroded = cv2.erode(dilated, kernel, iterations=1)
+    # cv2.imwrite(os.path.join(output_dir, 'eroded.jpg'), eroded)
+
+    return eroded
+
+def get_biggest_connected_component(img):
+    # calculate segments
+    component_count, component_img, stats, centroids = ( 
+        cv2.connectedComponentsWithStats(edge_img, connectivity=8))
+
+    id_area_pairs = list(
+        map(
+            lambda x: (x[0], x[1][cv2.CC_STAT_AREA]),
+            enumerate(stats)
+           )
         )
 
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    stats = sorted(id_area_pairs, key=lambda stat: stat[1], reverse=True)
+    
+    component_id = stats[1][0]
+    print(component_id)
+    
+    # select biggest component
+    component = cv2.inRange(component_img, component_id, component_id)
+    # cv2.imwrite(os.path.join(output_dir, 'components.jpg'), component_img)
 
-float_gray = gray.astype(np.float32) / 255.0
-
-blur = cv2.GaussianBlur(float_gray, (0, 0), sigmaX=2, sigmaY=2)
-num = float_gray - blur
-
-blur = cv2.GaussianBlur(num*num, (0, 0), sigmaX=4, sigmaY=4)
-den = cv2.pow(blur, 0.5)
-
-gray = num / den
-
-cv2.normalize(gray, dst=gray, alpha=0.0, beta=1.0, norm_type=cv2.NORM_MINMAX)
-
-cv2.imwrite(
-        os.path.join(output_dir, 'norm.jpeg'),
-        gray * 255
-    )
+    return component
 
 
 
-exit()
+img = cv2.imread(
+        os.path.join(input_dir, 'sudoku_001.jpeg'))
 
+downsampled = downsample(img)
+edge_img  = get_edges(downsampled)
+component = get_biggest_connected_component(edge_img)
 
-img_path = os.path.join(input_dir, 'sudoku_001.jpeg')
-img = cv2.imread(img_path)
-
-gray = cv2.equalizeHist(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
-cv2.imwrite(os.path.join(output_dir, 'adapt.jpg'), gray)  
-
-
-
-
-converted = cv2.cvtColor(img, cv2.COLOR_BGR2HSV_FULL)
-
-saturation = cv2.split(converted)[1]
-value =  255 - cv2.split(converted)[2]
-
-result = 255 - cv2.multiply(saturation, value, scale=1/255)
-cv2.imwrite(os.path.join(output_dir, 'a.jpg'), saturation)  
-cv2.imwrite(os.path.join(output_dir, 'b.jpg'), value)  
-cv2.imwrite(os.path.join(output_dir, 'test.jpg'), result)  
-
-
-exit()
-
-height, width, _ = img.shape
-fy = 512
-fx = int(round((fy/height) * width))
-
-# downsample
-# img = cv2.resize(img, # original image
-#                  (fx, fy), # set fx and fy, not the final size
-#                  interpolation=cv2.INTER_CUBIC)
-# 
-# cv2.imwrite(os.path.join(output_dir, 'downsampled.jpg'), img)  
-
-# blur
-blurred = cv2.GaussianBlur(img, (21, 21), 0)
-cv2.imwrite(os.path.join(output_dir, 'gaussian.jpg'), blurred)  
-
-
-# apply some filters
-r, g, b = cv2.split(blurred)
-edges0 = cv2.Canny(r, 300, 900, apertureSize=5, L2gradient=True)
-edges1 = cv2.Canny(g, 300, 900, apertureSize=5)
-edges2 = cv2.Canny(b, 300, 900, apertureSize=5)
-
-
-# save filtered image (canny.jpg)
-cv2.imwrite(os.path.join(output_dir, 'canny0.jpg'), edges0)
-cv2.imwrite(os.path.join(output_dir, 'canny1.jpg'), edges1)
-cv2.imwrite(os.path.join(output_dir, 'canny2.jpg'), edges2)
-
-result = cv2.multiply(edges0, edges1)
-result = cv2.multiply(result, edges2)
-kernel = np.ones((3, 3), np.uint8)
-edges = cv2.dilate(result, kernel, iterations=4)
-edges = cv2.erode(edges, kernel, iterations=4)
-cv2.imwrite(os.path.join(output_dir, 'mul.jpg'), edges)
+cv2.imwrite(os.path.join(output_dir, 'component.jpg'), component)
 
 
 # apply HoughLines
-lines = cv2.HoughLines(edges0, rho=1, theta=np.pi/360, threshold=200)
+lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=300)
 
 
 if not lines.any():
@@ -151,19 +142,72 @@ for i in range(len(lines)):  # filtering
 
 print('Number of filtered lines:', len(filtered_lines))
 
-for line in filtered_lines:
-    rho, theta = line[0]
-    a = np.cos(theta)
-    b = np.sin(theta)
-    x0 = a*rho
-    y0 = b*rho
-    x1 = int(x0 + 1000*(-b))
-    y1 = int(y0 + 1000*(a))
-    x2 = int(x0 - 1000*(-b))
-    y2 = int(y0 - 1000*(a))
 
-    cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+# filtered lines => corners
+
+horizontal_lines = []
+vertical_lines = []
+for line1 in filtered_lines:
+    rho0, theta0 = filtered_lines[0][0]
+    rho1, theta1 = line1[0]
+
+    # calc difference
+    # 1 -> same
+    # 0 -> 180° difference
+    diff = theta1 - theta0
+    diff = abs(np.cos(diff))
+
+    if diff < np.cos(45/180 * np.pi):
+        horizontal_lines.append(line1)
+    else:
+        vertical_lines.append(line1)
+
+
+for line in horizontal_lines:
+    rho, theta = line[0]
+    print(theta)
+
+
+rho, theta = horizontal_lines[0][0]
+a = np.cos(theta)
+b = np.sin(theta)
+x0 = a*rho
+y0 = b*rho
+x1 = int(x0 + 1000*(-b))
+y1 = int(y0 + 1000*(a))
+x2 = int(x0 - 1000*(-b))
+y2 = int(y0 - 1000*(a))
+cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
+rho, theta = vertical_lines[0][0]
+a = np.cos(theta)
+b = np.sin(theta)
+x0 = a*rho
+y0 = b*rho
+x1 = int(x0 + 1000*(-b))
+y1 = int(y0 + 1000*(a))
+x2 = int(x0 - 1000*(-b))
+y2 = int(y0 - 1000*(a))
+cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
 # print image with highlighted, detected lines
-cv2.imwrite(os.path.dirname(os.path.abspath(__file__)) +
-            '/../images/hough.jpg', img)
+
+for hline in list(horizontal_lines[0]):
+    for vline in list(vertical_lines[0]):
+        vrho, vtheta = vline[0]
+        hrho, htheta = hline[0]
+
+        # (vrho - y * sin(vtheta)) / cos(vtheta) = x
+        # hrho = x * cos(htheta) + y * sin(htheta)
+
+        y = ((vrho* np.cos(htheta) / np.cos(vtheta) - hrho) / 
+             (np.sin(vtheta) * np.cos(htheta) / np.cos(vtheta) + np.sin(htheta)))
+
+        x = (vrho - y * np.sin(vtheta)) / np.cos(vtheta)
+
+        print(f'x: {x} | y: {y}')
+        h, w = downsampled.shape
+        cv2.circle(downsampled, (int(h - y), int(w -x)), 10, color=255)
+
+cv2.imwrite(os.path.join(output_dir, 'hough.jpg'), downsampled)
+
+
