@@ -77,7 +77,7 @@ def get_biggest_connected_component(img):
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_007.jpg'))
+        os.path.join(input_dir, 'sudoku_008.jpg'))
 
 downsampled, scalef = downsample(img)
 edge_img  = get_edges(downsampled)
