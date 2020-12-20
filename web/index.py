@@ -17,15 +17,11 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in set(['pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 # render html template
-
-
 @app.route('/')
 def upload_form():
-    return render_template('index.html')
+    return render_template('upload.html')
 
 # post for image upload
-
-
 @app.route('/', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
