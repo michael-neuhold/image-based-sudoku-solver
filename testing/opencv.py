@@ -77,14 +77,16 @@ def get_biggest_connected_component(img):
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_008.jpg'))
+        os.path.join(input_dir, 'sudoku_005.jpg'))
 
 downsampled, scalef = downsample(img)
 edge_img  = get_edges(downsampled)
+cv2.imwrite(os.path.join(output_dir, 'component.jpg'), edge_img)
+
 component = get_biggest_connected_component(edge_img)
 
-cv2.imwrite(os.path.join(output_dir, 'component.jpg'), component)
 
+exit()
 
 # apply HoughLines
 lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=220)
