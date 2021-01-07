@@ -1,144 +1,102 @@
 from math import pi, sqrt
+from typing import Tuple
 import cv2
 import numpy as np
 import os
+
+import prep
 
 # read image
 dirname  = os.path.dirname(__file__)
 input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
+DEBUG_OUTPUT = output_dir
 
-def downsample(img, fy):
-    height, width = img.shape
-    fx = int( round((fy/height) * width) )
+def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tuple:
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray, scalef1 = prep.downsample(gray, 480)
+    norm = prep.normalize(gray)
+    edge_img  = prep.get_edges(norm)
 
-    # downsample
-    downsampled = cv2.resize(img, # original image
-                    (fx, fy), # set fx and fy, not the final size
-                    interpolation=cv2.INTER_CUBIC)
-    return downsampled, (fy / height)
+    component_img, component_size = prep.get_biggest_connected_component(edge_img)
 
-def get_edges(img):
-    canny = cv2.Canny(img, 120, 400)
-
-    kernel = np.array([
-                        [ 0, 1, 1, 1, 0 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 0, 1, 1, 1, 0 ]
-                     ], dtype=np.uint8)
-    kernel3 = np.array([
-                        [ 1, 1, 1 ],
-                        [ 1, 1, 1 ],
-                        [ 1, 1, 1 ],
-                     ], dtype=np.uint8)
+    result, scalef2 = prep.downsample(component_img, 120)
+    _, result = cv2.threshold(result, 110, 255, cv2.THRESH_BINARY)
     
-    # join edges => every line consists of 2 edges
-    result = cv2.dilate(canny, kernel, iterations=1)
+    debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'component.jpg'), result)
+    scalef = scalef1 * scalef2
 
-    # remove thin edges
-    result = cv2.erode(result, kernel, iterations=1)
-    result = cv2.erode(result, kernel3, iterations=1)
+    return result, component_size, scalef
 
-    # regrow remaining edges
-    #result = cv2.dilate(canny, kernel3, iterations=1)
+def filter_lines(lines):
+    if len(lines) == 0:
+        print('No lines were found')
+        return
 
-    return result
+    rho_threshold = 14
+    theta_threshold = 0.17 # ~10°
 
-def get_biggest_connected_component(img):
-    # calculate segments
-    component_count, component_img, stats, centroids = ( 
-        cv2.connectedComponentsWithStats(edge_img, connectivity=8))
+    # how many lines are similar to a given one
+    similar_lines = {i: [] for i in range(len(lines))}
+    for i in range(len(lines)):
+        for j in range(len(lines)):
+            if i == j:
+                continue
 
-    id_area_pairs = list(
-        map(
-            lambda x: (x[0], x[1][cv2.CC_STAT_AREA]),
-            enumerate(stats)
-           )
-        )
+            rho_i, theta_i = lines[i][0]
+            rho_j, theta_j = lines[j][0]
+            if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
+                similar_lines[i].append(j)
 
-    stats = sorted(id_area_pairs, key=lambda stat: stat[1], reverse=True)
-    
-    component_id = stats[1][0]
-    print(component_id)
-    
-    # select biggest component
-    component = cv2.inRange(component_img, component_id, component_id)
-    # cv2.imwrite(os.path.join(output_dir, 'components.jpg'), component_img)
+    # ordering the INDECES of the lines by how many are similar to them
+    indices = [i for i in range(len(lines))]
+    indices.sort(key=lambda x: len(similar_lines[x]))
 
-    return component
+    # line flags is the base for the filtering
+    line_flags = len(lines)*[True]
+    for i in range(len(lines) - 1):
+        # if we already disregarded the ith element in the ordered list then we don't care (we will not delete anything based on it and we will never reconsider using this line again)
+        if not line_flags[indices[i]]:
+            continue
 
+        # we are only considering those elements that had less similar line
+        for j in range(i + 1, len(lines)):
+            # and only if we have not disregarded them already
+            if not line_flags[indices[j]]:
+                continue
+
+            rho_i, theta_i = lines[indices[i]][0]
+            rho_j, theta_j = lines[indices[j]][0]
+            if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
+                # if it is similar and have not been disregarded yet then drop it now
+                line_flags[indices[j]] = False
+
+    print('number of Hough lines:', len(lines))
+
+    filtered_lines = []
+
+    for i in range(len(lines)):  # filtering
+        if line_flags[i]:
+            filtered_lines.append(lines[i])
+
+    print('Number of filtered lines:', len(filtered_lines))
+
+    return filtered_lines
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_005.jpg'))
+        os.path.join(input_dir, 'sudoku_004.jpg'))
 
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-downsampled, scalef = downsample(gray, 480)
-edge_img  = get_edges(downsampled)
-cv2.imwrite(os.path.join(output_dir, 'component.jpg'), edge_img)
-component = get_biggest_connected_component(edge_img)
+component, component_size, scalef = extract_sudoku_component(img, DEBUG_OUTPUT)
+print(component_size)
 
-
-exit()
 
 # apply HoughLines
-lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=220)
+lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=50)
+filtered_lines = filter_lines(lines)
 
 
-if not lines.any():
-    print('No lines were found')
-    exit()
-
-rho_threshold = 15
-theta_threshold = 0.1
-
-# how many lines are similar to a given one
-similar_lines = {i: [] for i in range(len(lines))}
-for i in range(len(lines)):
-    for j in range(len(lines)):
-        if i == j:
-            continue
-
-        rho_i, theta_i = lines[i][0]
-        rho_j, theta_j = lines[j][0]
-        if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
-            similar_lines[i].append(j)
-
-# ordering the INDECES of the lines by how many are similar to them
-indices = [i for i in range(len(lines))]
-indices.sort(key=lambda x: len(similar_lines[x]))
-
-# line flags is the base for the filtering
-line_flags = len(lines)*[True]
-for i in range(len(lines) - 1):
-    # if we already disregarded the ith element in the ordered list then we don't care (we will not delete anything based on it and we will never reconsider using this line again)
-    if not line_flags[indices[i]]:
-        continue
-
-    # we are only considering those elements that had less similar line
-    for j in range(i + 1, len(lines)):
-        # and only if we have not disregarded them already
-        if not line_flags[indices[j]]:
-            continue
-
-        rho_i, theta_i = lines[indices[i]][0]
-        rho_j, theta_j = lines[indices[j]][0]
-        if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
-            # if it is similar and have not been disregarded yet then drop it now
-            line_flags[indices[j]] = False
-
-print('number of Hough lines:', len(lines))
-
-filtered_lines = []
-
-for i in range(len(lines)):  # filtering
-    if line_flags[i]:
-        filtered_lines.append(lines[i])
-
-print('Number of filtered lines:', len(filtered_lines))
 
 
 # filtered lines => corners
@@ -167,11 +125,17 @@ for line in filtered_lines:
     b = np.sin(theta)
     x0 = a*rho
     y0 = b*rho
-    x1 = int(x0 + 1000*(-b))
-    y1 = int(y0 + 1000*(a))
-    x2 = int(x0 - 1000*(-b))
-    y2 = int(y0 - 1000*(a))
-    cv2.line(downsampled, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    x1 = int((x0 + 1000*(-b)) / scalef)
+    y1 = int((y0 + 1000*(a)) / scalef)
+    x2 = int((x0 - 1000*(-b)) / scalef)
+    y2 = int((y0 - 1000*(a)) / scalef)
+    cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+    print(f'theta {theta}')
+
+DEBUG_OUTPUT and cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)
+
+exit()
 
 # print image with highlighted, detected lines
 edge_points = { 0: [], 1:[], 2: [], 3: [], 4: [] } #...
