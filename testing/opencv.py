@@ -9,47 +9,43 @@ input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
 
-def downsample(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    height, width, _ = img.shape
-    fy = 512
+def downsample(img, fy):
+    height, width = img.shape
     fx = int( round((fy/height) * width) )
 
     # downsample
-    downsampled = cv2.resize(gray, # original image
+    downsampled = cv2.resize(img, # original image
                     (fx, fy), # set fx and fy, not the final size
                     interpolation=cv2.INTER_CUBIC)
-    return downsampled, (512 / height)
+    return downsampled, (fy / height)
 
 def get_edges(img):
-    # cv2.imwrite(os.path.join(output_dir, 'downsampled.jpg'), downsampled)  
+    canny = cv2.Canny(img, 120, 400)
 
-    # blur
-    blurred = cv2.medianBlur(img, ksize=3)
-    # cv2.imwrite(os.path.join(output_dir, 'median.jpg'), blurred)  
+    kernel = np.array([
+                        [ 0, 1, 1, 1, 0 ],
+                        [ 1, 1, 1, 1, 1 ],
+                        [ 1, 1, 1, 1, 1 ],
+                        [ 1, 1, 1, 1, 1 ],
+                        [ 0, 1, 1, 1, 0 ]
+                     ], dtype=np.uint8)
+    kernel3 = np.array([
+                        [ 1, 1, 1 ],
+                        [ 1, 1, 1 ],
+                        [ 1, 1, 1 ],
+                     ], dtype=np.uint8)
+    
+    # join edges => every line consists of 2 edges
+    result = cv2.dilate(canny, kernel, iterations=1)
 
-    # apply some filters
-    sobel_x = cv2.Sobel(blurred, cv2.CV_32F, 1, 0)
-    sobel_y = cv2.Sobel(blurred, cv2.CV_32F, 0, 1)
-    sobel_x = cv2.multiply(sobel_x, sobel_x)
-    sobel_y = cv2.multiply(sobel_y, sobel_y)
-    sobel = cv2.add(sobel_x, sobel_y)
-    sobel = cv2.sqrt(sobel)
-    sobel = sobel / sobel.max() * 255
+    # remove thin edges
+    result = cv2.erode(result, kernel, iterations=1)
+    result = cv2.erode(result, kernel3, iterations=1)
 
-    _, sobel = cv2.threshold(sobel, 50, 255, type=cv2.THRESH_BINARY)
+    # regrow remaining edges
+    #result = cv2.dilate(canny, kernel3, iterations=1)
 
-    # cv2.imwrite(os.path.join(output_dir, 'sobel.jpg'), sobel)  
-
-    sobel = sobel.astype('uint8')
-
-    kernel = np.ones((3, 3), np.uint8)
-    dilated = cv2.dilate(sobel, kernel, iterations=1)
-    eroded = cv2.erode(dilated, kernel, iterations=1)
-    # cv2.imwrite(os.path.join(output_dir, 'eroded.jpg'), eroded)
-
-    return eroded
+    return result
 
 def get_biggest_connected_component(img):
     # calculate segments
@@ -77,14 +73,16 @@ def get_biggest_connected_component(img):
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_008.jpg'))
+        os.path.join(input_dir, 'sudoku_005.jpg'))
 
-downsampled, scalef = downsample(img)
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+downsampled, scalef = downsample(gray, 480)
 edge_img  = get_edges(downsampled)
+cv2.imwrite(os.path.join(output_dir, 'component.jpg'), edge_img)
 component = get_biggest_connected_component(edge_img)
 
-cv2.imwrite(os.path.join(output_dir, 'component.jpg'), component)
 
+exit()
 
 # apply HoughLines
 lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=220)
