@@ -5,18 +5,26 @@ import numpy as np
 import os
 import time
 
+import argparse
+
 from numpy.core.fromnumeric import sort
 
-active_ex = 0
+parser = argparse.ArgumentParser()
+parser.add_argument('--example', type=int)
+args = parser.parse_args()
+print(args.example)
+
+active_ex = args.example
 
 import prep
+import lines
 
 # read image
 dirname  = os.path.dirname(__file__)
 input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
-DEBUG_OUTPUT = output_dir
+DEBUG_OUTPUT = None # output_dir
 
 def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tuple:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -34,69 +42,7 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
 
     return result, component_size, scalef
 
-def filter_lines(lines):
-    if len(lines) == 0:
-        print('No lines were found')
-        return
 
-    rho_threshold = 20
-    theta_threshold = 0.17 # ~10°
-
-    # how many lines are similar to a given one
-    similar_lines = {i: [] for i in range(len(lines))}
-    for i in range(len(lines) - 1):
-        for j in range(i + 1, len(lines)):
-            if i == j:
-                continue
-
-            rho_i, theta_i = lines[i][0]
-            rho_j, theta_j = lines[j][0]
-
-            diff_rad = theta_i - theta_j
-            diff = abs(np.cos(diff_rad))
-
-            if abs(abs(rho_i) - abs(rho_j)) < rho_threshold and diff > np.cos(16/180 * np.pi):
-                similar_lines[i].append(j)
-                similar_lines[j].append(i)
-
-    # ordering the INDECES of the lines by how many are similar to them
-    indices = [i for i in range(len(lines))]
-    indices.sort(key=lambda x: len(similar_lines[x]))
-
-    # line flags is the base for the filtering
-    line_flags = len(lines)*[True]
-    for i in range(len(lines) - 1):
-        # if we already disregarded the ith element in the ordered list then we don't care (we will not delete anything based on it and we will never reconsider using this line again)
-        if not line_flags[indices[i]]:
-            continue
-
-        # we are only considering those elements that had less similar line
-        for j in range(i + 1, len(lines)):
-            # and only if we have not disregarded them already
-            if not line_flags[indices[j]]:
-                continue
-
-            rho_i, theta_i = lines[indices[i]][0]
-            rho_j, theta_j = lines[indices[j]][0]
-
-            diff_rad = theta_i - theta_j
-            diff = abs(np.cos(diff_rad))
-
-            if abs(abs(rho_i) - abs(rho_j)) < rho_threshold and diff > np.cos(16/180 * np.pi):
-                # if it is similar and have not been disregarded yet then drop it now
-                line_flags[indices[j]] = False
-
-    print('number of Hough lines:', len(lines))
-
-    filtered_lines = []
-
-    for i in range(len(lines)):  # filtering
-        if line_flags[i]:
-            filtered_lines.append(lines[i])
-
-    print('Number of filtered lines:', len(filtered_lines))
-
-    return filtered_lines
 
 
 examples= [
@@ -111,62 +57,37 @@ examples= [
 
 img = cv2.imread(
         os.path.join(input_dir, examples[active_ex]))
-
 original = img.copy()
 
-
 start = time.time()
+
 component, component_size, scalef = extract_sudoku_component(img, DEBUG_OUTPUT)
 
-
-print(component_size)
-
-
 # apply HoughLines
-lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
-filtered_lines = filter_lines(lines)
+hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
+filtered_lines = lines.filter_similar(hough_lines, DEBUG_OUTPUT)
 
+if len(filtered_lines) == 0:
+    exit()
 
+# split into vertical and horizontal lines
+horizontal_lines, vertical_lines = lines.split_horizantal_vertical(filtered_lines)
 
+if DEBUG_OUTPUT:
+    # render lines (debug)
+    for line in filtered_lines:
+        rho, theta = line[0]
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a*rho
+        y0 = b*rho
+        x1 = int((x0 + 1000*(-b) + 0.5) / scalef)
+        y1 = int((y0 + 1000*(a) + 0.5) / scalef)
+        x2 = int((x0 - 1000*(-b) + 0.5) / scalef)
+        y2 = int((y0 - 1000*(a) + 0.5) / scalef)
 
-
-# filtered lines => corners
-
-horizontal_lines = []
-vertical_lines = []
-for line1 in filtered_lines:
-    rho0, theta0 = filtered_lines[0][0]
-    rho1, theta1 = line1[0]
-
-    # calc difference
-    # 1 -> same
-    # 0 -> 180° difference
-    diff = theta1 - theta0
-    diff = abs(np.cos(diff))
-
-    if diff < np.cos(45/180 * np.pi):
-        horizontal_lines.append(line1)
-    else:
-        vertical_lines.append(line1)
-
-print(len(vertical_lines))
-print(len(horizontal_lines))
-
-
-# render lines (debug)
-for line in filtered_lines:
-    rho, theta = line[0]
-    a = np.cos(theta)
-    b = np.sin(theta)
-    x0 = a*rho
-    y0 = b*rho
-    x1 = int((x0 + 1000*(-b) + 0.5) / scalef)
-    y1 = int((y0 + 1000*(a) + 0.5) / scalef)
-    x2 = int((x0 - 1000*(-b) + 0.5) / scalef)
-    y2 = int((y0 - 1000*(a) + 0.5) / scalef)
-
-    cv2.line(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
-    # print(f'theta {theta} | rho {rho} | ({x0}, {y0})')
+        cv2.line(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
+        # print(f'theta {theta} | rho {rho} | ({x0}, {y0})')
 
 
 DEBUG_OUTPUT and cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)

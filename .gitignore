@@ -135,3 +135,6 @@ sudoku-solver.code-workspace
 
 # images
 images/
+
+# vscode-settings
+.vscode/
