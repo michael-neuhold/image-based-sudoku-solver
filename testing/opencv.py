@@ -7,7 +7,7 @@ import time
 
 from numpy.core.fromnumeric import sort
 
-active_ex = 3
+active_ex = 0
 
 import prep
 
@@ -101,9 +101,11 @@ def filter_lines(lines):
 
 examples= [
     'sudoku_001.jpg',
+    'sudoku_010.jpg',
     'sudoku_004.jpg',
     'sudoku_006.jpg',
-    'sudoku_007.jpg'
+    'sudoku_007.jpg',
+    # 'sudoku_011.jpg',
 ]
 
 
