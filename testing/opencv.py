@@ -21,7 +21,7 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
 
     component_img, component_size = prep.get_biggest_connected_component(edge_img)
 
-    result, scalef2 = prep.downsample(component_img, 120)
+    result, scalef2 = prep.downsample(component_img, 240)
     _, result = cv2.threshold(result, 110, 255, cv2.THRESH_BINARY)
     
     debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'component.jpg'), result)
@@ -34,20 +34,25 @@ def filter_lines(lines):
         print('No lines were found')
         return
 
-    rho_threshold = 14
+    rho_threshold = 20
     theta_threshold = 0.17 # ~10°
 
     # how many lines are similar to a given one
     similar_lines = {i: [] for i in range(len(lines))}
-    for i in range(len(lines)):
-        for j in range(len(lines)):
+    for i in range(len(lines) - 1):
+        for j in range(i + 1, len(lines)):
             if i == j:
                 continue
 
             rho_i, theta_i = lines[i][0]
             rho_j, theta_j = lines[j][0]
-            if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
+
+            diff_rad = theta_i - theta_j
+            diff = abs(np.cos(diff_rad))
+
+            if abs(abs(rho_i) - abs(rho_j)) < rho_threshold and diff > np.cos(16/180 * np.pi):
                 similar_lines[i].append(j)
+                similar_lines[j].append(i)
 
     # ordering the INDECES of the lines by how many are similar to them
     indices = [i for i in range(len(lines))]
@@ -68,7 +73,11 @@ def filter_lines(lines):
 
             rho_i, theta_i = lines[indices[i]][0]
             rho_j, theta_j = lines[indices[j]][0]
-            if abs(rho_i - rho_j) < rho_threshold and abs(theta_i - theta_j) < theta_threshold:
+
+            diff_rad = theta_i - theta_j
+            diff = abs(np.cos(diff_rad))
+
+            if abs(abs(rho_i) - abs(rho_j)) < rho_threshold and diff > np.cos(16/180 * np.pi):
                 # if it is similar and have not been disregarded yet then drop it now
                 line_flags[indices[j]] = False
 
@@ -86,14 +95,14 @@ def filter_lines(lines):
 
 
 img = cv2.imread(
-        os.path.join(input_dir, 'sudoku_004.jpg'))
+        os.path.join(input_dir, 'sudoku_007.jpg'))
 
 component, component_size, scalef = extract_sudoku_component(img, DEBUG_OUTPUT)
 print(component_size)
 
 
 # apply HoughLines
-lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=50)
+lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
 filtered_lines = filter_lines(lines)
 
 
@@ -125,13 +134,14 @@ for line in filtered_lines:
     b = np.sin(theta)
     x0 = a*rho
     y0 = b*rho
-    x1 = int((x0 + 1000*(-b)) / scalef)
-    y1 = int((y0 + 1000*(a)) / scalef)
-    x2 = int((x0 - 1000*(-b)) / scalef)
-    y2 = int((y0 - 1000*(a)) / scalef)
-    cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    x1 = int((x0 + 1000*(-b) + 0.5) / scalef)
+    y1 = int((y0 + 1000*(a) + 0.5) / scalef)
+    x2 = int((x0 - 1000*(-b) + 0.5) / scalef)
+    y2 = int((y0 - 1000*(a) + 0.5) / scalef)
 
-    print(f'theta {theta}')
+    cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 1)
+    # print(f'theta {theta} | rho {rho} | ({x0}, {y0})')
+
 
 DEBUG_OUTPUT and cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)
 
