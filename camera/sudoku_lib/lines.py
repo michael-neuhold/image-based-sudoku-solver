@@ -10,10 +10,10 @@ def my_atan(x, y):
 
 def filter_similar(lines, debug_output=None) -> List:
     if lines is None:
-        print(f'error no lines found')
+        print(f'error: no lines found')
         return []
     elif len(lines) == 0 or len(lines) > 1000:
-        print(f'error line-count: {len(lines)}')
+        print(f'error: line-count = {len(lines)}')
         return []
 
     rho_threshold = 20
