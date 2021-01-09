@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 import sys
 
+from sudoku_lib import sudoku
+
 def displayFrame():
     ret, frame = cap.read()
     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -14,16 +16,25 @@ def displayFrame():
     p = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
     # print input image
     inputImageBox.setPixmap(QPixmap.fromImage(p))
-    # print output image (calculate -> result image)
-    outputImageBox.setPixmap(QPixmap.fromImage(p))
+
+    unwarped = sudoku.extract(frame)
+    if not (unwarped is None):
+        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        h, w, ch = output.shape
+        bytesPerLine = ch * w
+        convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
+        outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+    else:
+        pass # outputImageBox.setPixmap(QPixmap.fromImage(p))
+
 
 app = QApplication([])
 window = QWidget()
 
 # setup video capture
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 # setup timer
 timer = QTimer()
