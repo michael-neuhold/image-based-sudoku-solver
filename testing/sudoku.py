@@ -141,10 +141,10 @@ if __name__ == '__main__':
 
     DEBUG_OUTPUT and render_corners(img, oriented_corners)
 
-    end = time.time()
-    print(end - start)
-
     unwarp(oriented_corners, scalef, original, DEBUG_OUTPUT)
+
+    end = time.time()
+    print(f'computation time: {(end - start)*1000}ms')
 
 
 
