@@ -24,7 +24,7 @@ dirname  = os.path.dirname(__file__)
 input_dir = os.path.join(dirname, '..', 'images', 'input')
 output_dir = os.path.join(dirname, '..', 'images', 'output')
 
-DEBUG_OUTPUT = None # output_dir
+DEBUG_OUTPUT = output_dir
 
 def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tuple:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -48,7 +48,10 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
 examples= [
     'sudoku_001.jpg',
     'sudoku_010.jpg',
+    'sudoku_002.jpg',
+    'sudoku_003.jpg',
     'sudoku_004.jpg',
+    'sudoku_005.jpg',
     'sudoku_006.jpg',
     'sudoku_007.jpg',
     # 'sudoku_011.jpg',
@@ -100,26 +103,8 @@ for hindex, hline in enumerate(horizontal_lines):
     points = []
     for vindex, vline in enumerate(vertical_lines):
         # switching v and h works for 002
-        vrho, vtheta = vline[0]
-        hrho, htheta = hline[0]
+        (x, y) = lines.calc_intersection(vline[0], hline[0])
 
-        # rh = x * cos(th) + y * sin(th)
-        # rv = x * cos(tv) + y * sin(tv)
-       
-        # (rh - y * sin(th)) / cos(th) = x
-        # rv = x * cos(tv) + y * sin(tv)
-
-
-        # needs fix: something seems to be wrong 
-
-
-
-        y = (vrho - (hrho * np.cos(vtheta) / np.cos(htheta))) / (np.sin(vtheta) - np.sin(htheta) * np.cos(vtheta) / np.cos(htheta))
-        x = (hrho - y * np.sin(htheta)) / np.cos(htheta)
-
-        
-        # h, w = downsampled.shape
-        # cv2.circle(img, (int(x/scalef), int(y/scalef)), 1, color=255, thickness=3)
         points.append((x, y, hindex, vindex))
         
     xsum = 0
@@ -142,7 +127,6 @@ for hindex, hline in enumerate(horizontal_lines):
     
     stdevy = sqrt(ydsum)
     stdevx = sqrt(xdsum)
-    # print('stddev: ', stdevx, stdevy)
 
     min = points[0]
     max = points[0]
@@ -159,17 +143,11 @@ for hindex, hline in enumerate(horizontal_lines):
             if point[1] > max[1]:
                 max = point
 
-    print('min: ', min)
-    print('max: ', max)
     edge_points[min[3]].append(min)
     edge_points[max[3]].append(max)
     # cv2.circle(downsampled, (int(min[0]), int(min[1])), 1, color=255, thickness=3)
-    # cv2.circle(downsampled, (int(max[0]), int(max[1])), 1, color=255, thickness=3)
-
 DEBUG_OUTPUT and cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)
 
-
-# print(edge_points)
 
 corner_points = []
 for points in edge_points.values():
@@ -195,7 +173,6 @@ for points in edge_points.values():
     
     stdevy = sqrt(ydsum)
     stdevx = sqrt(xdsum)
-    print('stddev: ', stdevx, stdevy)
 
     min = points[0]
     max = points[0]
@@ -212,8 +189,6 @@ for points in edge_points.values():
             if point[1] > max[1]:
                 max = point
 
-    # cv2.circle(img, (int(min[0]/scalef), int(min[1]/ scalef)), 3, color=255, thickness=3)
-    # cv2.circle(img, (int(max[0]/scalef), int(max[1]/scalef)), 3, color=255, thickness=3)
     corner_points.append(min)
     corner_points.append(max)
 

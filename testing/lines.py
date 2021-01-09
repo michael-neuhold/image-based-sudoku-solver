@@ -84,3 +84,30 @@ def split_horizantal_vertical(lines_complete: List) -> Tuple[List, List]:
             vertical_lines.append(line1)
 
     return horizontal_lines, vertical_lines
+
+
+def calc_intersection(vline, hline) -> Tuple:
+    vrho, vtheta = vline
+    hrho, htheta = hline
+    # x * cos(th) + y * sin(th) = rh 
+    # x * cos(tv) + y * sin(tv) = rv
+
+    #    ┌   ┐     ┌                  ┐ −1    ┌    ┐
+    #    │ x │     │ cos(th)  sin(th) │       │ rh │
+    #    │   │  =  │                  │   *   │    │
+    #    │ y │     │ cos(tv)  sin(tv) │       │ rv │
+    #    └   ┘     └                  ┘       └    ┘
+
+    A = np.array([
+            [ np.cos(htheta), np.sin(htheta) ],
+            [ np.cos(vtheta), np.sin(vtheta) ]
+        ])
+    B = np.array([
+            [ hrho ],
+            [ vrho ]
+        ])
+
+    Ainv = np.linalg.inv(A) 
+    X = Ainv @ B
+
+    return (X[0][0], X[1][0])
