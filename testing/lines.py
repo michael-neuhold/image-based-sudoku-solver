@@ -1,8 +1,15 @@
+from math import pi, sqrt
 from typing import List, Tuple
 import numpy as np
 
+def my_atan(x, y):
+    return np.pi*(1.0-0.5*(1+np.sign(x))*(1-np.sign(y**2))\
+        -0.25*(2+np.sign(x))*np.sign(y))\
+        -np.sign(x*y)*np.arctan((np.abs(x)-np.abs(y))/(np.abs(x)+np.abs(y)))
+
+
 def filter_similar(lines, debug_output=None) -> List:
-    if lines is None:
+    if lines is None or len(lines) == 0:
         print('no lines found')
         return []
 
@@ -65,7 +72,7 @@ def filter_similar(lines, debug_output=None) -> List:
     return filtered_lines
 
 
-def split_horizantal_vertical(lines_complete: List) -> Tuple[List, List]:
+def split_horizontal_vertical(lines_complete: List) -> Tuple[List, List]:
     horizontal_lines = []
     vertical_lines = []
     for line1 in lines_complete:
@@ -111,3 +118,82 @@ def calc_intersection(vline, hline) -> Tuple:
     X = Ainv @ B
 
     return (X[0][0], X[1][0])
+
+
+def calc_xy_stddev(points) -> Tuple:
+    xsum = 0
+    ysum = 0
+    for point in points:
+        xsum += point[0]
+        ysum += point[1]
+    xavg = xsum / len(points)
+    yavg = ysum / len(points)
+
+    xdsum = 0
+    ydsum = 0
+    for point in points:
+        xd = point[0] - xavg
+        xd = xd*xd
+        yd = point[1] - yavg
+        yd = yd*yd
+        xdsum += xd
+        ydsum += yd
+    
+    # sqrt not needed because only 
+    # comparison is evaluated
+    stdevx = xdsum # sqrt(xdsum)
+    stdevy = ydsum # sqrt(ydsum)
+
+    return (stdevx, stdevy)
+
+
+def get_minmax(points, stddevx, stddevy) -> Tuple:
+    minp = None
+    maxp = None
+    if stddevx > stddevy:
+        minp = min(points, key=lambda p: p[0])
+        maxp = max(points, key=lambda p: p[0])
+    else:
+        minp = min(points, key=lambda p: p[1])
+        maxp = max(points, key=lambda p: p[1])
+
+    return (minp, maxp)
+
+
+def calc_oriented_corners(horizontal_lines, vertical_lines) -> List:
+    # get min/max intersection-points on horizontal lines
+    edge_points = [ [] for _ in range(5) ] #...
+    for hindex, hline in enumerate(horizontal_lines):
+        points = []
+        for vindex, vline in enumerate(vertical_lines):
+            (x, y) = calc_intersection(vline[0], hline[0])
+            points.append((x, y, hindex, vindex))
+            
+        stdevx, stdevy = calc_xy_stddev(points)
+        minp, maxp = get_minmax(points, stdevx, stdevy)
+        
+        edge_points[minp[3]].append(minp)
+        edge_points[maxp[3]].append(maxp)
+
+
+    # filter points for vertical min/max
+    corner_points = []
+    for points in edge_points:
+        if len(points) <= 0: continue
+
+        stdevx, stdevy = calc_xy_stddev(points)
+        minp, maxp = get_minmax(points, stdevx, stdevy)
+        
+        corner_points.append(minp)
+        corner_points.append(maxp)
+
+
+    if len(corner_points) != 4:
+        print(f'error: invalid corner count ({len(corner_points)})')
+        return []
+
+    x_center = (corner_points[0][0] + corner_points[1][0] + corner_points[2][0] + corner_points[3][0]) * 0.25
+    y_center = (corner_points[0][1] + corner_points[1][1] + corner_points[2][1] + corner_points[3][1]) * 0.25
+
+    oriented_corners = sorted(corner_points, key=lambda point: my_atan(point[0] - x_center, point[1] - y_center))
+    return oriented_corners
