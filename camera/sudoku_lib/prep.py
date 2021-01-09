@@ -3,6 +3,61 @@ import cv2
 import numpy as np
 import os
 
+kernel11 = (
+    np.array([
+        [ 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0 ],
+        [ 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0 ],
+        [ 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0 ],
+    ], dtype=np.uint8))
+
+kernel9 = (
+    np.array([
+        [ 0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 0, 0, 1, 1, 1, 0, 0, 0 ],
+    ], dtype=np.uint8))
+
+kernel7 = (
+    np.array([
+        [ 0, 0, 1, 1, 1, 0, 0 ],
+        [ 0, 1, 1, 1, 1, 1, 0 ],
+        [ 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1 ],
+        [ 0, 1, 1, 1, 1, 1, 0 ],
+        [ 0, 0, 1, 1, 1, 0, 0 ],
+    ], dtype=np.uint8))
+
+kernel5 = (
+    np.array([
+        [ 0, 1, 1, 1, 0 ],
+        [ 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1 ],
+        [ 0, 1, 1, 1, 0 ]
+    ], dtype=np.uint8))
+
+kernel3 = (
+    np.array([
+        [ 1, 1, 1 ],
+        [ 1, 1, 1 ],
+        [ 1, 1, 1 ],
+    ], dtype=np.uint8))
+
+
 def downsample(img, fy, debug_output=None, debug_filename = None):
     height, width = img.shape
     fx = int( round((fy/height) * width) )
@@ -37,34 +92,17 @@ def normalize(img, debug_output=None, debug_filename = None):
 
 
 def get_edges(img, debug_output=False, debug_filename = None):
-    canny = cv2.Canny(img, 300, 400)
+    # optimize parameters: a    b
+    canny = cv2.Canny(img, 190, 360) # 190, 380
 
-    kernel5 = np.array([
-                        [ 0, 1, 1, 1, 0 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 1, 1, 1, 1, 1 ],
-                        [ 0, 1, 1, 1, 0 ]
-                     ], dtype=np.uint8)
-    kernel3 = np.array([
-                        [ 1, 1, 1 ],
-                        [ 1, 1, 1 ],
-                        [ 1, 1, 1 ],
-                     ], dtype=np.uint8)
-    
     # join edges => every line consists of 2 edges
-    result = cv2.dilate(canny, kernel5, iterations=1)
+    result = cv2.dilate(canny, kernel7, iterations=1)
 
     # remove thin edges
-    result = cv2.erode(result, kernel5, iterations=1)
-    result = cv2.erode(result, kernel3, iterations=1)
-
-    # regrow remaining edges
-    result = cv2.dilate(canny, kernel3, iterations=1)
-
-    debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'edges.jpg'), result)
-
+    result = cv2.erode(result, kernel9, iterations=1)
     return result
+
+
 
 
 def get_biggest_connected_component(edge_img, debug_output=None, debug_filename = None) -> Tuple:

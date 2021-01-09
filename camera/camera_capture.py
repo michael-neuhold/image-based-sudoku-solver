@@ -7,8 +7,18 @@ import sys
 
 from sudoku_lib import sudoku
 
+COMPONENT = 'component'
+HOUGH = 'hough'
+HOUGH_FILTERED = 'hough-filtered'
+CORNERS = 'corners'
+BOUND = 'bound'
+
 def displayFrame():
     ret, frame = cap.read()
+
+    # extract sudoku
+    unwarped = sudoku.extract_with_bound(frame)
+
     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
     bytesPerLine = ch * w
@@ -17,15 +27,12 @@ def displayFrame():
     # print input image
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
-    unwarped = sudoku.extract(frame)
     if not (unwarped is None):
         output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
         convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
         outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
-    else:
-        pass # outputImageBox.setPixmap(QPixmap.fromImage(p))
 
 
 app = QApplication([])

@@ -11,14 +11,33 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray, scalef1 = prep.downsample(gray, 480)
     norm = prep.normalize(gray)
-    edge_img  = prep.get_edges(norm)
+
+    debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'normalized.jpg'), norm)
+
+    edge_img  = prep.get_edges(norm, debug_output)
 
     component_img, component_size = prep.get_biggest_connected_component(edge_img)
 
-    result, scalef2 = prep.downsample(component_img, 240)
-    _, result = cv2.threshold(result, 110, 255, cv2.THRESH_BINARY)
-    
+    kernel3 = np.array([
+                            [ 1, 1, 1 ],
+                            [ 1, 1, 1 ],
+                            [ 1, 1, 1 ],
+                       ], dtype=np.uint8)
+
+    kernel5 = np.array([
+                          [ 0, 1, 1, 1, 0 ],
+                          [ 1, 1, 1, 1, 1 ],
+                          [ 1, 1, 1, 1, 1 ],
+                          [ 1, 1, 1, 1, 1 ],
+                          [ 0, 1, 1, 1, 0 ]
+                       ], dtype=np.uint8)
+    eroded = cv2.erode(component_img, kernel3, iterations=1)
+
+    result, scalef2 = prep.downsample(eroded, 240)
+    _, result = cv2.threshold(result, 10, 255, cv2.THRESH_BINARY)
+
     debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'component.jpg'), result)
+    
     scalef = scalef1 * scalef2
 
     return result, component_size, scalef
@@ -117,7 +136,9 @@ if __name__ == '__main__':
         'sudoku_004.jpg',
         'sudoku_005.jpg',
         'sudoku_006.jpg',
-        'sudoku_007.jpg'
+        'sudoku_007.jpg',
+        'sudoku_012.png',
+        'sudoku_013.png',
     ]
 
     img = cv2.imread(
@@ -129,7 +150,7 @@ if __name__ == '__main__':
     component, component_size, scalef = extract_sudoku_component(img, DEBUG_OUTPUT)
 
     # apply HoughLines
-    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
+    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=90)
     filtered_lines = lines.filter_similar(hough_lines, DEBUG_OUTPUT)
 
     # split into vertical and horizontal lines

@@ -5,6 +5,13 @@ import numpy as np
 from . import prep, lines
 
 
+kernel3 = (
+    np.array([
+        [ 1, 1, 1 ],
+        [ 1, 1, 1 ],
+        [ 1, 1, 1 ],
+    ], dtype=np.uint8))
+
 def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tuple:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray, scalef1 = prep.downsample(gray, 480)
@@ -12,14 +19,15 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
     edge_img  = prep.get_edges(norm)
 
     component_img, component_size = prep.get_biggest_connected_component(edge_img)
+    # eroded = cv2.erode(component_img, kernel3, iterations=1)
 
     result, scalef2 = prep.downsample(component_img, 240)
-    _, result = cv2.threshold(result, 110, 255, cv2.THRESH_BINARY)
+    _, result = cv2.threshold(result, 64, 255, cv2.THRESH_BINARY)
     
     debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'component.jpg'), result)
     scalef = scalef1 * scalef2
 
-    return result, component_size, scalef
+    return result, component_size * scalef * scalef, scalef
 
 
 def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None):
@@ -43,7 +51,7 @@ def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None
 
 
 
-def render_lines(img, lines, scalef):
+def render_lines(img, lines, scalef, color=(255,255,255)):
     # render lines (debug)
     for line in lines:
         rho, theta = line[0]
@@ -56,27 +64,59 @@ def render_lines(img, lines, scalef):
         x2 = int((x0 - 1000*(-b) + 0.5) / scalef)
         y2 = int((y0 - 1000*(a) + 0.5) / scalef)
 
-        cv2.line(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
+        cv2.line(img, (x1, y1), (x2, y2), color, 1)
         # print(f'theta {theta} | rho {rho} | ({x0}, {y0})')
     
     # cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)
 
 
-def render_corners(img, corners):
+def render_corners(img, corners, scalef):
     cv2.circle(img, (int((corners[0][0]+0.5)/scalef), int((corners[0][1]+0.5)/ scalef)), 3, color=(255,0,0), thickness=5)
     cv2.circle(img, (int((corners[1][0]+0.5)/scalef), int((corners[1][1]+0.5)/ scalef)), 3, color=(0,255,0), thickness=5)
     cv2.circle(img, (int((corners[2][0]+0.5)/scalef), int((corners[2][1]+0.5)/ scalef)), 3, color=(0,0,255), thickness=5)
     cv2.circle(img, (int((corners[3][0]+0.5)/scalef), int((corners[3][1]+0.5)/ scalef)), 3, color=(0,0,0), thickness=5)
 
-    cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'corner_points.jpg'), img)
+    # cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'corner_points.jpg'), img)
+
+def render_bound(img, corners, scalef):
+    for i in range(len(corners)):
+        j = (i + 1) % 4
+
+        x1 = int((corners[i][0] + 0.5) / scalef)
+        y1 = int((corners[i][1] + 0.5) / scalef)
+        x2 = int((corners[j][0] + 0.5) / scalef)
+        y2 = int((corners[j][1] + 0.5) / scalef)
+
+        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 4)
 
 
-def extract(input_img):
+
+
+
+def extract(input_img, debug_stage=None):
     component, component_size, scalef = extract_sudoku_component(input_img)
+    if debug_stage == 'component':
+        print(f'component_size = {component_size}')
+        return component
+
 
     # apply HoughLines
-    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
-    filtered_lines = lines.filter_similar(hough_lines)
+    hough_threshold = int(component_size / 8 * 0.3)
+    hough_threshold = max(hough_threshold, 50)
+    hough_threshold = min(hough_threshold, 140)
+    # print(f'hough_threshold = {hough_threshold}')
+    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=hough_threshold)
+    if debug_stage == 'hough':
+        if not (hough_lines is None):
+            render_lines(input_img, hough_lines, scalef)
+            # print(f'len(hough_lines) = {len(hough_lines)}')
+        return input_img
+
+    
+    filtered_lines = lines.filter_similar_new(hough_lines, component.shape[1], component.shape[0])
+    if debug_stage == 'hough-filtered':
+        render_lines(input_img, filtered_lines, scalef, (0, 255, 0))
+        return input_img
 
     if len(filtered_lines) == 0:
         return None
@@ -88,7 +128,40 @@ def extract(input_img):
     if len(oriented_corners) != 4:
         return None
 
+    if debug_stage == 'corners':
+        render_corners(input_img, oriented_corners, scalef)
+        return input_img
+
+    if debug_stage == 'bound':
+        render_bound(input_img, oriented_corners, scalef)
+        return input_img
+
     unwarped = unwarp(oriented_corners, scalef, input_img)
+    return unwarped
+
+
+def extract_with_bound(input_img):
+    component, component_size, scalef = extract_sudoku_component(input_img)
+    # apply HoughLines
+    hough_threshold = int(component_size / 8 * 0.3)
+    hough_threshold = max(hough_threshold, 50)
+    hough_threshold = min(hough_threshold, 140)
+    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=hough_threshold)
+    
+    filtered_lines = lines.filter_similar_new(hough_lines, component.shape[1], component.shape[0])
+
+    if len(filtered_lines) == 0:
+        return None
+
+    horizontal_lines, vertical_lines = lines.split_horizontal_vertical(filtered_lines)
+    oriented_corners = lines.calc_oriented_corners(horizontal_lines, vertical_lines)
+
+    if len(oriented_corners) != 4:
+        return None
+
+    unwarped = unwarp(oriented_corners, scalef, input_img)
+    render_bound(input_img, oriented_corners, scalef)
+
     return unwarped
 
 
