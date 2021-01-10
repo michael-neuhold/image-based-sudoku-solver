@@ -6,12 +6,16 @@ import cv2
 import sys
 
 from sudoku_lib import sudoku
+from digit_recognition import digit
 
 COMPONENT = 'component'
 HOUGH = 'hough'
 HOUGH_FILTERED = 'hough-filtered'
 CORNERS = 'corners'
 BOUND = 'bound'
+
+DIGIT_WIDTH = 64
+MARGIN = 10
 
 def displayFrame():
     ret, frame = cap.read()
@@ -28,7 +32,32 @@ def displayFrame():
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
     if not (unwarped is None):
-        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        # extract individual digits
+        digits = []
+        for y in range(9):
+            digits.append([])
+            for x in range(9):
+                digit_img = unwarped[ y*DIGIT_WIDTH + MARGIN : (y+1)*DIGIT_WIDTH - MARGIN, 
+                                      x*DIGIT_WIDTH + MARGIN : (x+1)*DIGIT_WIDTH - MARGIN ]
+                digit_img = cv2.cvtColor(digit_img, cv2.COLOR_BGR2GRAY)
+                digit_img = 255 - digit_img
+                _, mask = cv2.threshold(digit_img, 180, 255, cv2.THRESH_BINARY)
+                # mask =  cv2.erode(mask, np.ones((3,3)))                
+                mask = cv2.resize(mask, (28, 28), interpolation=cv2.INTER_AREA)
+                
+                digits[y].append(mask)
+
+
+
+                if y != 5 or x != 5:
+                   continue
+                else:
+                   prediction = digit.predict(mask)
+                   print(prediction)
+                
+
+        output = cv2.cvtColor(digits[5][5], cv2.COLOR_BGR2RGB)
+        # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
         convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)

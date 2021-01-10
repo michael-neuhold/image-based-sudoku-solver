@@ -135,6 +135,11 @@ sudoku-solver.code-workspace
 
 # images
 images/
+*.jpg
+*.png
 
 # vscode-settings
 .vscode/
+
+# machine learning weights
+*.h5

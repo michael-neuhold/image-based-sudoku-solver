@@ -32,10 +32,10 @@ def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tup
 
 def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None):
     pts2 = np.float32([
-                [512-1, 512-1],
-                [0, 512-1],
+                [576-1, 576-1],
+                [0, 576-1],
                 [0, 0], 
-                [512-1, 0],
+                [576-1, 0],
             ]) 
     pts1 = np.float32([
         *map(lambda p: [(p[0] + 0.5) / scalef, (p[1] + 0.5) / scalef], oriented_corners)
@@ -43,7 +43,7 @@ def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None
         
     # Apply Perspective Transform Algorithm 
     matrix = cv2.getPerspectiveTransform(pts1, pts2) 
-    unwarped = cv2.warpPerspective(img, matrix, (512, 512))
+    unwarped = cv2.warpPerspective(img, matrix, (576, 576))
 
     debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'done.jpg'), unwarped)
 
