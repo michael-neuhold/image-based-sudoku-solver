@@ -6,10 +6,10 @@ if __name__ == '__main__':
     import os
     dirname = os.path.dirname(__file__)
 
-    x = cv2.imread(os.path.join(dirname, 'test8.png'))
+    x = cv2.imread(os.path.join(dirname, 'test3.png'))
     #compute a bit-wise inversion so black becomes white and vice versa
     x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
-    # x = np.invert(x)
+    x = np.invert(x)
     #make it the right size
     x = cv2.resize(x, (28, 28))
     #convert to a 4D tensor to feed into our model
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     for _ in range (9):
         out = model.predict(x)
-        print(np.argmax(out))
+        print(out)
 
     end = time.time()
     print(end - start)

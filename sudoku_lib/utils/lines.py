@@ -1,6 +1,7 @@
-from math import pi, sqrt
+from math import inf, pi, sqrt
 from typing import List, Tuple
 import numpy as np
+
 
 def my_atan(x, y):
     return np.pi*(1.0-0.5*(1+np.sign(x))*(1-np.sign(y**2))\
@@ -9,8 +10,11 @@ def my_atan(x, y):
 
 
 def filter_similar(lines, debug_output=None) -> List:
-    if lines is None or len(lines) == 0:
-        print('no lines found')
+    if lines is None:
+        print(f'error: no lines found')
+        return []
+    elif len(lines) == 0 or len(lines) > 1000:
+        print(f'error: line-count = {len(lines)}')
         return []
 
     rho_threshold = 20
@@ -72,6 +76,72 @@ def filter_similar(lines, debug_output=None) -> List:
     return filtered_lines
 
 
+def filter_similar_new(lines, width, height, debug_output=None) -> List:
+    if lines is None:
+        print(f'error: no lines found')
+        return []
+    elif len(lines) == 0 or len(lines) > 200:
+        print(f'error: line-count = {len(lines)}')
+        return []
+
+    # sudoku.render_lines(img, lines, scalef)
+
+    theta_threshold = np.cos(16/180 * np.pi)
+
+    # group similar lines together
+    similar_line_collection = []
+    used = [False for _ in range(len(lines))]
+    for i in range(len(lines) - 1):
+        similar_lines = []
+        for j in range(i + 1, len(lines)):
+            rho_i, theta_i = lines[i][0]
+            rho_j, theta_j = lines[j][0]
+
+            diff_rad = theta_i - theta_j
+            diff = abs(np.cos(diff_rad))
+
+            if (not used[j]) and (diff > theta_threshold):
+                intersection = calc_intersection(lines[i][0], lines[j][0])
+                if intersection:
+                    x, y = intersection
+                    # cv2.circle(img, (int((x+0.5)/scalef), int((y+0.5)/ scalef)), 1, color=(255,0,0), thickness=1)
+                    if (x > 0 and x < width and
+                        y > 0 and y < height):
+                        similar_lines.append(lines[j])
+                        used[j]= True
+        
+        if not used[i]:
+            similar_lines.append(lines[i])
+            used[i] = True
+        
+        if len(similar_lines) > 0:
+            similar_line_collection.append(similar_lines)
+
+
+        # print(len(similar_line_collection))
+    # process similar lines
+    filtered_lines = []
+    for similar_lines in similar_line_collection:
+        avg_theta = 0
+        avg_rho = 0
+        for line in similar_lines:
+            rho, theta = line[0]
+            if rho < 0:
+                rho = abs(rho)
+                theta = theta - pi
+            avg_rho += rho
+            avg_theta += theta
+
+        avg_theta /= len(similar_lines)
+        avg_rho /= len(similar_lines)
+
+        # sudoku.render_lines(img, similar_lines, scalef, (200,200,200))
+        # sudoku.render_lines(img, [[ (avg_rho, avg_theta) ]], scalef, (0, 255, 0))
+        filtered_lines.append([ (avg_rho, avg_theta) ])
+
+    return filtered_lines
+
+
 def split_horizontal_vertical(lines_complete: List) -> Tuple[List, List]:
     horizontal_lines = []
     vertical_lines = []
@@ -114,7 +184,11 @@ def calc_intersection(vline, hline) -> Tuple:
             [ vrho ]
         ])
 
-    Ainv = np.linalg.inv(A) 
+    try:
+        Ainv = np.linalg.inv(A) 
+    except:
+        return None
+
     X = Ainv @ B
 
     return (X[0][0], X[1][0])
@@ -162,12 +236,14 @@ def get_minmax(points, stddevx, stddevy) -> Tuple:
 
 def calc_oriented_corners(horizontal_lines, vertical_lines) -> List:
     # get min/max intersection-points on horizontal lines
-    edge_points = [ [] for _ in range(5) ] #...
+    edge_points = [ [] for _ in range(100) ] #...
     for hindex, hline in enumerate(horizontal_lines):
         points = []
         for vindex, vline in enumerate(vertical_lines):
-            (x, y) = calc_intersection(vline[0], hline[0])
-            points.append((x, y, hindex, vindex))
+            intersection = calc_intersection(vline[0], hline[0])
+            if intersection:
+                x, y = intersection
+                points.append((x, y, hindex, vindex))
             
         stdevx, stdevy = calc_xy_stddev(points)
         minp, maxp = get_minmax(points, stdevx, stdevy)
