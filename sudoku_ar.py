@@ -15,7 +15,7 @@ CORNERS = 'corners'
 BOUND = 'bound'
 
 DIGIT_WIDTH = 64
-MARGIN = 10
+MARGIN = 8
 
 def displayFrame():
     ret, frame = cap.read()
@@ -47,16 +47,14 @@ def displayFrame():
                 
                 digits[y].append(mask)
 
-
-
-                if y != 5 or x != 5:
+                if y != 5 or x != 7:
                    continue
                 else:
                    prediction = digit.predict(mask)
-                   print(prediction)
+                   print(np.argmax(prediction))
                 
 
-        output = cv2.cvtColor(digits[5][5], cv2.COLOR_BGR2RGB)
+        output = cv2.cvtColor(digits[5][7], cv2.COLOR_BGR2RGB)
         # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
