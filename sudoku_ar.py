@@ -59,7 +59,6 @@ def displayFrame():
                     print(' ', end='')
                     digits[y].append(None)
                 else:            # contains digit
-                    print('#', end='')
                     cnn_input = unwarped[ y*DIGIT_WIDTH + CNN_INPUT_MARGIN : (y+1)*DIGIT_WIDTH - CNN_INPUT_MARGIN, 
                                           x*DIGIT_WIDTH + CNN_INPUT_MARGIN : (x+1)*DIGIT_WIDTH - CNN_INPUT_MARGIN ]
                     cnn_input = cv2.cvtColor(cnn_input, cv2.COLOR_BGR2GRAY)
@@ -73,11 +72,15 @@ def displayFrame():
                 
                     digits[y].append(cnn_input)
 
-                    if y != y_check or x != x_check:
-                        continue
-                    else:
-                        prediction = digit.predict(cnn_input)
-                        print(prediction)
+                        # if y != y_check or x != x_check:
+                        #     continue
+                        # else:
+                        #     prediction = digit.predict(cnn_input)
+                        #     print(prediction)
+                        
+                    # print('#', end='')
+                    prediction = digit.predict(cnn_input)
+                    print(np.argmax(prediction), end='')
             print()
 
         print('------')
