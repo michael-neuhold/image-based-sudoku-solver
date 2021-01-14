@@ -18,6 +18,9 @@ DIGIT_WIDTH = 64
 DETECTOR_MARGIN = 16
 CNN_INPUT_MARGIN = 8
 
+x_check = 8
+y_check = 2
+
 def displayFrame():
     ret, frame = cap.read()
 
@@ -70,7 +73,7 @@ def displayFrame():
                 
                     digits[y].append(cnn_input)
 
-                    if y != 2 or x != 2:
+                    if y != y_check or x != x_check:
                         continue
                     else:
                         prediction = digit.predict(cnn_input)
@@ -79,8 +82,8 @@ def displayFrame():
 
         print('------')
                 
-        if not (digits[2][2] is None):
-            output = cv2.cvtColor(digits[2][2], cv2.COLOR_BGR2RGB)
+        if not (digits[y_check][x_check] is None):
+            output = cv2.cvtColor(digits[y_check][x_check], cv2.COLOR_BGR2RGB)
                     # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
             h, w, ch = output.shape
             bytesPerLine = ch * w
