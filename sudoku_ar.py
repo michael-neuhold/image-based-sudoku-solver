@@ -15,7 +15,8 @@ CORNERS = 'corners'
 BOUND = 'bound'
 
 DIGIT_WIDTH = 64
-MARGIN = 8
+DETECTOR_MARGIN = 16
+CNN_INPUT_MARGIN = 8
 
 def displayFrame():
     ret, frame = cap.read()
@@ -37,29 +38,54 @@ def displayFrame():
         for y in range(9):
             digits.append([])
             for x in range(9):
-                digit_img = unwarped[ y*DIGIT_WIDTH + MARGIN : (y+1)*DIGIT_WIDTH - MARGIN, 
-                                      x*DIGIT_WIDTH + MARGIN : (x+1)*DIGIT_WIDTH - MARGIN ]
-                digit_img = cv2.cvtColor(digit_img, cv2.COLOR_BGR2GRAY)
-                digit_img = 255 - digit_img
-                _, mask = cv2.threshold(digit_img, 180, 255, cv2.THRESH_BINARY)
-                # mask =  cv2.erode(mask, np.ones((3,3)))                
-                mask = cv2.resize(mask, (28, 28), interpolation=cv2.INTER_AREA)
-                
-                digits[y].append(mask)
+                # determine if tile contains digit
+                digit_frame = unwarped[ y*DIGIT_WIDTH + DETECTOR_MARGIN : (y+1)*DIGIT_WIDTH - DETECTOR_MARGIN, 
+                                        x*DIGIT_WIDTH + DETECTOR_MARGIN : (x+1)*DIGIT_WIDTH - DETECTOR_MARGIN ]
+                digit_frame = cv2.cvtColor(digit_frame, cv2.COLOR_BGR2GRAY)
+                digit_frame = digit_frame.astype('float32')
+                avg = np.sum(digit_frame) / ((DIGIT_WIDTH - 2*DETECTOR_MARGIN)**2)
+                shifted = digit_frame - avg
+                squared = shifted * shifted
+                stddev = np.sqrt(np.sum(squared))
 
-                if y != 5 or x != 7:
-                   continue
-                else:
-                   prediction = digit.predict(mask)
-                   print(np.argmax(prediction))
-                
+                # stddev:
+                # - empty: [23, 114]
+                # - digit: [1248, 1583]
 
-        output = cv2.cvtColor(digits[5][7], cv2.COLOR_BGR2RGB)
-        # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
-        h, w, ch = output.shape
-        bytesPerLine = ch * w
-        convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
-        outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+                if stddev < 200: # empty
+                    print(' ', end='')
+                    digits[y].append(None)
+                else:            # contains digit
+                    print('#', end='')
+                    cnn_input = unwarped[ y*DIGIT_WIDTH + CNN_INPUT_MARGIN : (y+1)*DIGIT_WIDTH - CNN_INPUT_MARGIN, 
+                                          x*DIGIT_WIDTH + CNN_INPUT_MARGIN : (x+1)*DIGIT_WIDTH - CNN_INPUT_MARGIN ]
+                    cnn_input = cv2.cvtColor(cnn_input, cv2.COLOR_BGR2GRAY)
+                    cnn_input = cv2.resize(cnn_input, (28, 28), interpolation=cv2.INTER_AREA)
+                    cnn_input = 255 - cnn_input
+                    avg = np.sum(cnn_input) / (28 * 28)
+                    cnn_input = cnn_input.astype('float32')
+                    cnn_input = (cnn_input - avg)*6 + 0
+                    cnn_input = np.clip(cnn_input, 0, 255)
+                    cnn_input = cnn_input.astype('uint8')
+                
+                    digits[y].append(cnn_input)
+
+                    if y != 2 or x != 2:
+                        continue
+                    else:
+                        prediction = digit.predict(cnn_input)
+                        print(prediction)
+            print()
+
+        print('------')
+                
+        if not (digits[2][2] is None):
+            output = cv2.cvtColor(digits[2][2], cv2.COLOR_BGR2RGB)
+                    # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
+            h, w, ch = output.shape
+            bytesPerLine = ch * w
+            convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
+            outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
 
 
 app = QApplication([])

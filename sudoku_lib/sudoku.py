@@ -88,7 +88,7 @@ def render_bound(img, corners, scalef):
         x2 = int((corners[j][0] + 0.5) / scalef)
         y2 = int((corners[j][1] + 0.5) / scalef)
 
-        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 4)
+        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
 
 
