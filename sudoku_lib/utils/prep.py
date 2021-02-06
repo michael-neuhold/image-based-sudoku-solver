@@ -93,7 +93,7 @@ def normalize(img, debug_output=None, debug_filename = None):
 
 def get_edges(img, debug_output=False, debug_filename = None):
     # optimize parameters: a    b
-    canny = cv2.Canny(img, 190, 360) # 190, 380
+    canny = cv2.Canny(img, 180, 360) # 190, 380
 
     # join edges => every line consists of 2 edges
     result = cv2.dilate(canny, kernel7, iterations=1)
@@ -120,7 +120,6 @@ def get_biggest_connected_component(edge_img, debug_output=None, debug_filename 
     # find largest component (~ background)
     bg_stat = max(id_area_pairs, key=lambda stats: stats[1])
     bg_id = bg_stat[0]
-
     # find second largest component (~ sudoku)
     component_stat = max(id_area_pairs, key=lambda stat: stat[1] if stat[0] != bg_id else 0)
     component_id = component_stat[0]

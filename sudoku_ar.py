@@ -9,6 +9,10 @@ import sys
 from sudoku_lib import sudoku
 from digit_recognition import digit
 
+
+MODE = 'DEBUG' # 'DEBUG' | 'RELEASE'
+
+
 COMPONENT = 'component'
 HOUGH = 'hough'
 HOUGH_FILTERED = 'hough-filtered'
@@ -54,8 +58,7 @@ def calc_stddev(input_img): # grey 8bit
     stddev = np.sqrt(np.sum(squared))
     return stddev
 
-
-def displayFrame():
+def display_frame():
     ret, frame = cap.read()
 
     # extract sudoku
@@ -115,6 +118,29 @@ def displayFrame():
             convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
             outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
 
+def display_frame_debug():
+    ret, frame = cap.read()
+
+    # extract sudoku
+    copied = frame.copy()
+    _ = sudoku.extract(frame, HOUGH)
+    unwarped = sudoku.extract(copied, COMPONENT)
+
+    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    h, w, ch = rgbImage.shape
+    bytesPerLine = ch * w
+    convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
+    p = convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
+    # print input image
+    inputImageBox.setPixmap(QPixmap.fromImage(p))
+
+    if not (unwarped is None):
+        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        h, w, ch = output.shape
+        bytesPerLine = ch * w
+        convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
+        outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+
 
 app = QApplication([])
 window = QWidget()
@@ -126,7 +152,10 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 # setup timer
 timer = QTimer()
-timer.timeout.connect(displayFrame)
+if MODE == 'DEBUG':
+    timer.timeout.connect(display_frame_debug)
+elif MODE == 'RELEASE':
+    timer.timeout.connect(display_frame)
 timer.start(60)
 
 # setup ui elements

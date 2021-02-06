@@ -9,71 +9,71 @@ def my_atan(x, y):
         -np.sign(x*y)*np.arctan((np.abs(x)-np.abs(y))/(np.abs(x)+np.abs(y)))
 
 
-def filter_similar(lines, debug_output=None) -> List:
-    if lines is None:
-        print(f'error: no lines found')
-        return []
-    elif len(lines) == 0 or len(lines) > 1000:
-        print(f'error: line-count = {len(lines)}')
-        return []
-
-    rho_threshold = 20
-    theta_threshold = np.cos(16/180 * np.pi)
-
-    # how many lines are similar to a given one
-    similar_lines = [[] for _ in range(len(lines))]
-    for i in range(len(lines) - 1):
-        for j in range(i + 1, len(lines)):
-            rho_i, theta_i = lines[i][0]
-            rho_j, theta_j = lines[j][0]
-
-            diff_rad = theta_i - theta_j
-            diff = abs(np.cos(diff_rad))
-
-            if (abs(abs(rho_i) - abs(rho_j)) < rho_threshold and 
-                diff > theta_threshold):
-                similar_lines[i].append(j)
-                similar_lines[j].append(i)
-
-    # ordering the INDECES of the lines by how many are similar to them
-    indices = [i for i in range(len(lines))]
-    indices.sort(key=lambda x: len(similar_lines[x]))
-
-    # line flags is the base for the filtering
-    line_flags = len(lines)*[True]
-    for i in range(len(lines) - 1):
-        # if we already disregarded the ith element in the ordered list then we don't care (we will not delete anything based on it and we will never reconsider using this line again)
-        if not line_flags[indices[i]]:
-            continue
-
-        # we are only considering those elements that had less similar line
-        for j in range(i + 1, len(lines)):
-            # and only if we have not disregarded them already
-            if not line_flags[indices[j]]:
-                continue
-
-            rho_i, theta_i = lines[indices[i]][0]
-            rho_j, theta_j = lines[indices[j]][0]
-
-            diff_rad = theta_i - theta_j
-            diff = abs(np.cos(diff_rad))
-
-            if (abs(abs(rho_i) - abs(rho_j)) < rho_threshold and 
-                diff > theta_threshold):
-                # if it is similar and have not been disregarded yet then drop it now
-                line_flags[indices[j]] = False
-
-    debug_output and print('number of Hough lines:', len(lines))
-
-    filtered_lines = []
-
-    for i in range(len(lines)):  # filtering
-        if line_flags[i]:
-            filtered_lines.append(lines[i])
-
-    debug_output and print('Number of filtered lines:', len(filtered_lines))
-
-    return filtered_lines
+##def filter_similar(lines, debug_output=None) -> List:
+##    if lines is None:
+##        print(f'error: no lines found')
+##        return []
+##    elif len(lines) == 0 or len(lines) > 1000:
+##        print(f'error: line-count = {len(lines)}')
+##        return []
+##
+##    rho_threshold = 20
+##    theta_threshold = np.cos(16/180 * np.pi)
+##
+##    # how many lines are similar to a given one
+##    similar_lines = [[] for _ in range(len(lines))]
+##    for i in range(len(lines) - 1):
+##        for j in range(i + 1, len(lines)):
+##            rho_i, theta_i = lines[i][0]
+##            rho_j, theta_j = lines[j][0]
+##
+##            diff_rad = theta_i - theta_j
+##            diff = abs(np.cos(diff_rad))
+##
+##            if (abs(abs(rho_i) - abs(rho_j)) < rho_threshold and 
+##                diff > theta_threshold):
+##                similar_lines[i].append(j)
+##                similar_lines[j].append(i)
+##
+##    # ordering the INDECES of the lines by how many are similar to them
+##    indices = [i for i in range(len(lines))]
+##    indices.sort(key=lambda x: len(similar_lines[x]))
+##
+##    # line flags is the base for the filtering
+##    line_flags = len(lines)*[True]
+##    for i in range(len(lines) - 1):
+##        # if we already disregarded the ith element in the ordered list then we don't care (we will not delete anything based on it and we will never reconsider using this line again)
+##        if not line_flags[indices[i]]:
+##            continue
+##
+##        # we are only considering those elements that had less similar line
+##        for j in range(i + 1, len(lines)):
+##            # and only if we have not disregarded them already
+##            if not line_flags[indices[j]]:
+##                continue
+##
+##            rho_i, theta_i = lines[indices[i]][0]
+##            rho_j, theta_j = lines[indices[j]][0]
+##
+##            diff_rad = theta_i - theta_j
+##            diff = abs(np.cos(diff_rad))
+##
+##            if (abs(abs(rho_i) - abs(rho_j)) < rho_threshold and 
+##                diff > theta_threshold):
+##                # if it is similar and have not been disregarded yet then drop it now
+##                line_flags[indices[j]] = False
+##
+##    debug_output and print('number of Hough lines:', len(lines))
+##
+##    filtered_lines = []
+##
+##    for i in range(len(lines)):  # filtering
+##        if line_flags[i]:
+##            filtered_lines.append(lines[i])
+##
+##    debug_output and print('Number of filtered lines:', len(filtered_lines))
+##
+##    return filtered_lines
 
 
 def filter_similar_new(lines, width, height, debug_output=None) -> List:
@@ -84,13 +84,13 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
         print(f'error: line-count = {len(lines)}')
         return []
 
-    # sudoku.render_lines(img, lines, scalef)
-
     theta_threshold = np.cos(16/180 * np.pi)
 
     # group similar lines together
     similar_line_collection = []
     used = [False for _ in range(len(lines))]
+    intersects_with = [-1 for _ in range(len(lines))]
+    line_collection_id_for_parent_line = [-1 for _ in range(len(lines))]
     for i in range(len(lines) - 1):
         similar_lines = []
         for j in range(i + 1, len(lines)):
@@ -100,25 +100,32 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
             diff_rad = theta_i - theta_j
             diff = abs(np.cos(diff_rad))
 
-            if (not used[j]) and (diff > theta_threshold):
+            if diff > theta_threshold:
                 intersection = calc_intersection(lines[i][0], lines[j][0])
                 if intersection:
                     x, y = intersection
-                    # cv2.circle(img, (int((x+0.5)/scalef), int((y+0.5)/ scalef)), 1, color=(255,0,0), thickness=1)
                     if (x > 0 and x < width and
                         y > 0 and y < height):
-                        similar_lines.append(lines[j])
-                        used[j]= True
-        
+                        if not used[j]:
+                            similar_lines.append(lines[j])
+                            used[j] = True
+                            intersects_with[j] = i
+                        else:
+                            parent_line = intersects_with[j]
+                            line_collection_id = line_collection_id_for_parent_line[parent_line]
+                            similar_line_collection[line_collection_id].append(lines[j])
+                            used[j] = True
+                            intersects_with[j] = parent_line
+
         if not used[i]:
             similar_lines.append(lines[i])
             used[i] = True
         
         if len(similar_lines) > 0:
+            line_collection_id_for_parent_line[i] = len(similar_line_collection)
             similar_line_collection.append(similar_lines)
 
 
-        # print(len(similar_line_collection))
     # process similar lines
     filtered_lines = []
     for similar_lines in similar_line_collection:
@@ -138,6 +145,55 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
         # sudoku.render_lines(img, similar_lines, scalef, (200,200,200))
         # sudoku.render_lines(img, [[ (avg_rho, avg_theta) ]], scalef, (0, 255, 0))
         filtered_lines.append([ (avg_rho, avg_theta) ])
+
+    return filtered_lines
+
+
+# TODO:
+# could be improved => lines that are neither
+# vertical nor horizontal are not filtered
+# idea: * 'buckets' of similar lines (theta)
+#       * 'dissimilar' line creates new bucket
+#       * the two largest buckets are assumed to be the 
+#         horizontal/vertical lines
+def filter_outliers(lines, debug_output=None) -> List:
+    if (lines is None) or len(lines) == 0:
+        return []
+
+    theta_threshold = np.cos(16/180 * np.pi)
+
+    # group similar lines together
+    similar_line_collection = []
+    used = [False for _ in range(len(lines))]
+    for i in range(len(lines) - 1):
+        similar_lines = []
+        for j in range(i + 1, len(lines)):
+            rho_i, theta_i = lines[i][0]
+            rho_j, theta_j = lines[j][0]
+
+            diff_rad = theta_i - theta_j
+            diff = abs(np.cos(diff_rad))
+
+            if (not used[j]) and (diff > theta_threshold):
+                similar_lines.append(lines[j])
+                used[j]= True
+        
+        if not used[i]:
+            similar_lines.append(lines[i])
+            used[i] = True
+        
+        if len(similar_lines) > 0:
+            similar_line_collection.append(similar_lines)
+
+    if len(similar_line_collection) != 2:
+        print(f'similar: {len(similar_line_collection)}')
+        
+    if (len(similar_line_collection) == 0 or
+        len(similar_line_collection) == 1):
+        return []
+    
+    sorted_s_line_collection = sorted(similar_line_collection, key=lambda s_lines: len(s_lines), reverse=True)
+    filtered_lines = [ *sorted_s_line_collection[0], *sorted_s_line_collection[1] ]
 
     return filtered_lines
 

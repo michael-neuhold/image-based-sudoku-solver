@@ -3,6 +3,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
+
 if __name__ != '__main__': 
     from sudoku_lib.utils import prep, lines
 
@@ -91,18 +92,42 @@ def render_bound(img, corners, scalef):
         cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
 
+# try using cython
+def calc_component_bound(comp_img):
+    bound_img = np.zeros(comp_img.shape, dtype='uint8')
+    for y, scan_line in enumerate(comp_img):
+        x = 0
+        while (x < len(scan_line) and scan_line[x] == 0):
+            x += 1
 
+        if x < len(scan_line):
+            bound_img[y][x] = 255
+            x = len(scan_line)-1
+            while (x > 0 and scan_line[x] == 0):
+                x -= 1
+
+            if x > 0:
+                bound_img[y][x] = 255
+
+    return bound_img
+            
+
+        
 
 
 def extract(input_img, debug_stage=None):
     component, component_size, scalef = extract_sudoku_component(input_img)
+    # calc_component_bound
+    bound_img = calc_component_bound(component)
+
+
     if debug_stage == 'component':
         print(f'component_size = {component_size}')
-        return component
+        return bound_img
 
 
     # apply HoughLines
-    hough_threshold = int(component_size / 8 * 0.3)
+    hough_threshold = int(component_size / 8 * 0.28)
     hough_threshold = max(hough_threshold, 50)
     hough_threshold = min(hough_threshold, 140)
     # print(f'hough_threshold = {hough_threshold}')
@@ -114,7 +139,9 @@ def extract(input_img, debug_stage=None):
         return input_img
 
     
-    filtered_lines = lines.filter_similar_new(hough_lines, component.shape[1], component.shape[0])
+    filtered_lines = lines.filter_outliers(hough_lines)
+    filtered_lines = lines.filter_similar_new(filtered_lines, component.shape[1], component.shape[0])
+
     if debug_stage == 'hough-filtered':
         render_lines(input_img, filtered_lines, scalef, (0, 255, 0))
         return input_img
