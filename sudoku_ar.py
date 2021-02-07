@@ -7,7 +7,7 @@ import cv2
 import sys
 
 from sudoku_lib import sudoku
-from digit_recognition import digit
+# from digit_recognition import digit
 
 
 MODE = 'DEBUG' # 'DEBUG' | 'RELEASE'
@@ -97,15 +97,8 @@ def display_frame():
                 
                     digits[y].append(cnn_input)
 
-                        # if y != y_check or x != x_check:
-                        #     continue
-                        # else:
-                        #     prediction = digit.predict(cnn_input)
-                        #     print(prediction)
-                        
-                    # print('#', end='')
-                    prediction = digit.predict(cnn_input)
-                    print(np.argmax(prediction), end='')
+                    # prediction = digit.predict(cnn_input)
+                    # print(np.argmax(prediction), end='')
             print()
 
         print('------')
@@ -123,7 +116,7 @@ def display_frame_debug():
 
     # extract sudoku
     copied = frame.copy()
-    _ = sudoku.extract(frame, HOUGH)
+    # _ = sudoku.extract(frame, HOUGH)
     unwarped = sudoku.extract(copied, COMPONENT)
 
     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -135,7 +128,9 @@ def display_frame_debug():
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
     if not (unwarped is None):
-        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        # uMat = unwarped
+        uMat = np.array(unwarped).astype(np.uint8)
+        output = cv2.cvtColor(uMat, cv2.COLOR_GRAY2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
         convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)

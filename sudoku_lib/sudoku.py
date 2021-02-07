@@ -6,6 +6,7 @@ import numpy as np
 
 if __name__ != '__main__': 
     from sudoku_lib.utils import prep, lines
+    from sudoku_lib.sudoku_cython import calc_component_bound
 
 kernel3 = (
     np.array([
@@ -91,39 +92,17 @@ def render_bound(img, corners, scalef):
 
         cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
-
-# try using cython
-def calc_component_bound(comp_img):
-    bound_img = np.zeros(comp_img.shape, dtype='uint8')
-    for y, scan_line in enumerate(comp_img):
-        x = 0
-        while (x < len(scan_line) and scan_line[x] == 0):
-            x += 1
-
-        if x < len(scan_line):
-            bound_img[y][x] = 255
-            x = len(scan_line)-1
-            while (x > 0 and scan_line[x] == 0):
-                x -= 1
-
-            if x > 0:
-                bound_img[y][x] = 255
-
-    return bound_img
-            
-
-        
-
-
+# import sudoku_cython
 def extract(input_img, debug_stage=None):
     component, component_size, scalef = extract_sudoku_component(input_img)
     # calc_component_bound
-    bound_img = calc_component_bound(component)
+    bound_img = calc_component_bound(component, np.zeros(component.shape, dtype='uint8'))
 
 
     if debug_stage == 'component':
         print(f'component_size = {component_size}')
         return bound_img
+        # return component
 
 
     # apply HoughLines
@@ -226,6 +205,7 @@ if __name__ == '__main__':
         'sudoku_007.jpg'
     ]
 
+    active_ex = active_ex or 0
     img = cv2.imread(
             os.path.join(input_dir, examples[active_ex]))
     original = img.copy()
@@ -236,7 +216,8 @@ if __name__ == '__main__':
 
     # apply HoughLines
     hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=100)
-    filtered_lines = lines.filter_similar(hough_lines, DEBUG_OUTPUT)
+    
+    filtered_lines = lines.filter_similar_new(hough_lines, component.shape[1], component.shape[0], DEBUG_OUTPUT)
 
     # split into vertical and horizontal lines
     horizontal_lines, vertical_lines = lines.split_horizontal_vertical(filtered_lines)
