@@ -101,14 +101,15 @@ def extract(input_img, debug_stage=None):
 
     if debug_stage == 'component':
         print(f'component_size = {component_size}')
-        return bound_img
-        # return component
+        # return bound_img
+        return component
 
 
     # apply HoughLines
-    hough_threshold = int(component_size / 8 * 0.28)
-    hough_threshold = max(hough_threshold, 50)
-    hough_threshold = min(hough_threshold, 140)
+    # hough_threshold = int(component_size / 8 * 0.28)
+    # hough_threshold = max(hough_threshold, 50)
+    # hough_threshold = min(hough_threshold, 140)
+    hough_threshold = 90
     # print(f'hough_threshold = {hough_threshold}')
     hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=hough_threshold)
     if debug_stage == 'hough':

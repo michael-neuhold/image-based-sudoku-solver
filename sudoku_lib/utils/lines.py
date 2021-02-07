@@ -80,7 +80,7 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
     if lines is None:
         print(f'error: no lines found')
         return []
-    elif len(lines) == 0 or len(lines) > 200:
+    elif len(lines) == 0 or len(lines) > 5000:
         print(f'error: line-count = {len(lines)}')
         return []
 
