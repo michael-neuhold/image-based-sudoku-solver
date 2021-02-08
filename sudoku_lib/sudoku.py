@@ -95,23 +95,21 @@ def render_bound(img, corners, scalef):
 # import sudoku_cython
 def extract(input_img, debug_stage=None):
     component, component_size, scalef = extract_sudoku_component(input_img)
-    # calc_component_bound
-    bound_img = calc_component_bound(component, np.zeros(component.shape, dtype='uint8'))
 
+    # calc_component_bound
+    bound_img_ = calc_component_bound(component, np.zeros(component.shape, dtype='uint8'))
+    bound_img = np.array(bound_img_).astype(np.uint8)
 
     if debug_stage == 'component':
         print(f'component_size = {component_size}')
-        # return bound_img
         return component
 
 
     # apply HoughLines
-    # hough_threshold = int(component_size / 8 * 0.28)
-    # hough_threshold = max(hough_threshold, 50)
-    # hough_threshold = min(hough_threshold, 140)
-    hough_threshold = 90
+    bound_pixel_count =  np.sum(bound_img) / 255
+    hough_threshold = int(bound_pixel_count / 4 * 0.45)
     # print(f'hough_threshold = {hough_threshold}')
-    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=hough_threshold)
+    hough_lines = cv2.HoughLines(bound_img, rho=1, theta=np.pi/360, threshold=hough_threshold)
     if debug_stage == 'hough':
         if not (hough_lines is None):
             render_lines(input_img, hough_lines, scalef)

@@ -117,7 +117,7 @@ def display_frame_debug():
     # extract sudoku
     copied = frame.copy()
     # _ = sudoku.extract(frame, HOUGH)
-    unwarped = sudoku.extract(copied, COMPONENT)
+    unwarped = sudoku.extract(copied, BOUND)
 
     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
@@ -128,9 +128,7 @@ def display_frame_debug():
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
     if not (unwarped is None):
-        # uMat = unwarped
-        uMat = np.array(unwarped).astype(np.uint8)
-        output = cv2.cvtColor(uMat, cv2.COLOR_GRAY2RGB)
+        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
         convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
@@ -151,7 +149,7 @@ if MODE == 'DEBUG':
     timer.timeout.connect(display_frame_debug)
 elif MODE == 'RELEASE':
     timer.timeout.connect(display_frame)
-timer.start(60)
+timer.start(33) # 30fps
 
 # setup ui elements
 inputImageBox = QLabel('Input Image')

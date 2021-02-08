@@ -80,7 +80,7 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
     if lines is None:
         print(f'error: no lines found')
         return []
-    elif len(lines) == 0 or len(lines) > 5000:
+    elif len(lines) == 0 or len(lines) > 64:
         print(f'error: line-count = {len(lines)}')
         return []
 
@@ -158,6 +158,9 @@ def filter_similar_new(lines, width, height, debug_output=None) -> List:
 #         horizontal/vertical lines
 def filter_outliers(lines, debug_output=None) -> List:
     if (lines is None) or len(lines) == 0:
+        return []
+    elif len(lines) == 0 or len(lines) > 64:
+        print(f'error: line-count = {len(lines)}')
         return []
 
     theta_threshold = np.cos(16/180 * np.pi)
