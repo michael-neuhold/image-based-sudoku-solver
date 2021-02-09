@@ -37,19 +37,24 @@ if __name__ == '__main__':
 from keras.models import load_model
 import os
 dirname = os.path.dirname(__file__)
-model = load_model(os.path.join(dirname, 'claudschiIsSupiii.h5'))
+model = load_model(os.path.join(dirname, 'claudschiIsSupiii_JetztErstRecht.h5'))
 
-def predict(digit_img):
-    # bw = cv2.cvtColor(digit_img, cv2.COLOR_BGR2GRAY)
-    # digit = np.invert(digit_img)
-    digit = cv2.resize(digit_img, (28, 28))
-    #convert to a 4D tensor to feed into our model
-    digit = digit.reshape(1,28,28,1)
-    digit = digit.astype('float32')
-    digit /= 255
+def predict_multiple(images):
+    if len(images) == 0:
+        return []
 
-    out = model.predict(digit)
+    # prep
+    inputs = []
+    for img in images:
+        input = cv2.resize(img, (28, 28))
+        input = input.reshape(28,28,1)
+        input = input.astype('float32')
+        input /= 255
+        inputs.append(input)
 
-    return out
+    preped = np.array(inputs)
+    predictions = model.predict_on_batch(preped)
+
+    return [ np.argmax(prediction)+1 for prediction in predictions ]
 
 

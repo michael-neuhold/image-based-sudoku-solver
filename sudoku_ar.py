@@ -5,9 +5,23 @@ from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
 import cv2
 import sys
+import os
 
 from sudoku_lib import sudoku
-# from digit_recognition import digit
+from digit_recognition import digit
+
+
+dirname  = os.path.dirname(__file__)
+input_dir = os.path.join(dirname, 'images', 'input')
+output_dir = os.path.join(dirname, 'images', 'output')
+
+# number_id = 0
+# def save_cnn_input(img):
+#     global number_id
+#     img_name = f'ml_input_{number_id:03}.png'
+#     cv2.imwrite(os.path.join(output_dir, img_name), img)
+#     number_id += 1
+
 
 
 MODE = 'RELEASE' # 'DEBUG' | 'RELEASE'
@@ -21,7 +35,7 @@ BOUND = 'bound'
 
 DIGIT_WIDTH = 64
 DETECTOR_MARGIN = 16
-CNN_INPUT_MARGIN = 8
+CNN_INPUT_MARGIN = 4
 
 x_check = 8
 y_check = 2
@@ -75,8 +89,8 @@ def display_frame():
     if not (unwarped is None):
         # extract individual digits
         digits = []
+        digit_pos = []
         for y in range(9):
-            digits.append([])
             for x in range(9):
                 # determine if tile contains digit
                 stddev = (
@@ -84,32 +98,32 @@ def display_frame():
                         extract_detector_region(unwarped, (x, y))))
 
                 # stddev:
-                # - empty: [23, 114]
-                # - digit: [1248, 1583]
+                # - empty: [35, 145]
+                # - digit: [1458, 2103]
 
-                if stddev < 200: # empty
-                    print(' ', end='')
-                    digits[y].append(None)
-                else:            # contains digit
+                if stddev >= 800: # contains digit
                     cnn_input = (
                         post_process_cnn_input(
                             extract_cnn_input(unwarped, (x, y))))
                 
-                    digits[y].append(cnn_input)
+                    digits.append( cnn_input )
+                    digit_pos.append( (x, y) )
+                    # save_cnn_input(cnn_input)
 
-                    # prediction = digit.predict(cnn_input)
-                    # print(np.argmax(prediction), end='')
-            print()
+        predictions = digit.predict_multiple(digits)
+        reconstructed_sudoku = np.zeros((9, 9), dtype=np.int)
+        for (value, (x, y)) in zip(predictions, digit_pos):
+            reconstructed_sudoku[y, x] = value
 
-        print('------')
-                
-        if not (digits[y_check][x_check] is None):
-            output = cv2.cvtColor(digits[y_check][x_check], cv2.COLOR_BGR2RGB)
-                    # output = cv2.cvtColor(digits[5][5], cv2.COLOR_GRAY2RGB)
-            h, w, ch = output.shape
-            bytesPerLine = ch * w
-            convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
-            outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+        print(reconstructed_sudoku)
+        print()
+
+        # display unwarped
+        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        h, w, ch = output.shape
+        bytesPerLine = ch * w
+        convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
+        outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
 
 def display_frame_debug():
     ret, frame = cap.read()
