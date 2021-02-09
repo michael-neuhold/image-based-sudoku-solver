@@ -10,7 +10,7 @@ from sudoku_lib import sudoku
 # from digit_recognition import digit
 
 
-MODE = 'DEBUG' # 'DEBUG' | 'RELEASE'
+MODE = 'RELEASE' # 'DEBUG' | 'RELEASE'
 
 
 COMPONENT = 'component'

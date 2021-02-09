@@ -148,13 +148,18 @@ def extract(input_img, debug_stage=None):
 
 def extract_with_bound(input_img):
     component, component_size, scalef = extract_sudoku_component(input_img)
+
+    # calc_component_bound
+    bound_img_ = calc_component_bound(component, np.zeros(component.shape, dtype='uint8'))
+    bound_img = np.array(bound_img_).astype(np.uint8)
+    bound_pixel_count =  np.sum(bound_img) / 255
+
     # apply HoughLines
-    hough_threshold = int(component_size / 8 * 0.3)
-    hough_threshold = max(hough_threshold, 50)
-    hough_threshold = min(hough_threshold, 140)
-    hough_lines = cv2.HoughLines(component, rho=1, theta=np.pi/360, threshold=hough_threshold)
+    hough_threshold = int(bound_pixel_count / 4 * 0.45)
+    hough_lines = cv2.HoughLines(bound_img, rho=1, theta=np.pi/360, threshold=hough_threshold)
     
-    filtered_lines = lines.filter_similar_new(hough_lines, component.shape[1], component.shape[0])
+    filtered_lines = lines.filter_outliers(hough_lines)
+    filtered_lines = lines.filter_similar_new(filtered_lines, component.shape[1], component.shape[0])
 
     if len(filtered_lines) == 0:
         return None
