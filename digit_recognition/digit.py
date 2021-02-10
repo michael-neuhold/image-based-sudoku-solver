@@ -37,7 +37,7 @@ if __name__ == '__main__':
 from keras.models import load_model
 import os
 dirname = os.path.dirname(__file__)
-model = load_model(os.path.join(dirname, 'claudschiIsSupiii_JetztErstRecht.h5'))
+model = load_model(os.path.join(dirname, 'claudschiIsSupiii_pls.h5'))
 
 def predict_multiple(images):
     if len(images) == 0:

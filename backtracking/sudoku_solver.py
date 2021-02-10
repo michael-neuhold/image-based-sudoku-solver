@@ -37,22 +37,33 @@ def check_guess(board, row, col, guess):
             is_valid_row(board, row, col, guess))
 
 
+rec_count = 0
 def solve_sudoku(board):
+    global rec_count
+    rec_count = 0
+    return solve_sudoku_rec(board)
+
+def solve_sudoku_rec(board):
+    global rec_count
+    rec_count += 1
+    if (rec_count > 50000):
+        # end prematurely
+        return (False, rec_count)
 
     row, col = get_next_empty_position(board)
     if row is None:
-        return True
+        return (True, rec_count)
 
     for guess in range(1, 10):
 
         if check_guess(board, row, col, guess):
             board[row][col] = guess
-            if solve_sudoku(board):
-                return True
+            if solve_sudoku_rec(board)[0]:
+                return (True, rec_count)
 
     board[row][col] = 0
 
-    return False
+    return (False, rec_count)
 
 
 def print_board(board):

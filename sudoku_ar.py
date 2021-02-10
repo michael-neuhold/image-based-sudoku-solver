@@ -74,13 +74,117 @@ def calc_stddev(input_img): # grey 8bit
     stddev = np.sqrt(np.sum(squared))
     return stddev
 
+
+
+
+sudoku_solved = False
+sudoku_result = None
+empty_pos_g = []
+
+empty_counter = 0
+
 def display_frame():
+    global sudoku_solved
+    global sudoku_result
+    global empty_counter
+    global empty_pos_g
+
     ret, frame = cap.read()
 
     # extract sudoku
     extraction_result = sudoku.extract_with_bound(frame)
+    display_image = frame
 
-    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    if not (extraction_result is None):
+        empty_counter = 0
+
+        unwarped, warp_matrix = extraction_result
+        # extract individual digits
+        digits = []
+        digit_pos = []
+        empty_pos = []
+
+        if not sudoku_solved:
+            for y in range(9):
+                for x in range(9):
+                    # determine if tile contains digit
+                    stddev = (
+                        calc_stddev(
+                            extract_detector_region(unwarped, (x, y))))
+
+                    # stddev:
+                    # - empty: [35, 145]
+                    # - digit: [1458, 2103]
+
+                    if stddev >= 800: # contains digit
+                        cnn_input = (
+                            post_process_cnn_input(
+                                extract_cnn_input(unwarped, (x, y))))
+                    
+                        digits.append( cnn_input )
+                        digit_pos.append( (x, y) )
+                        # save_cnn_input(cnn_input)
+                    else:   # empty
+                        empty_pos.append( (x, y) )
+
+            if len(digits) > 2:
+                predictions = digit.predict_multiple(digits)
+                reconstructed_sudoku = np.zeros((9, 9), dtype=np.int)
+                for (value, (x, y)) in zip(predictions, digit_pos):
+                    reconstructed_sudoku[y, x] = value
+
+                print(reconstructed_sudoku)
+                solve_succes, rec_count = sudoku_solver.solve_sudoku(reconstructed_sudoku)
+                sudoku_solved = solve_succes
+                sudoku_result = reconstructed_sudoku
+                empty_pos_g = empty_pos
+
+
+        
+        if sudoku_solved:
+            blank_image = np.zeros(unwarped.shape, np.uint8)
+            for (x, y) in empty_pos_g:
+                x_ = int(x * (576 / 9) +12)
+                y_ = int(y * (576 / 9) +40 +(8-y)*1)
+                # cv2.putText(unwarped, str(reconstructed_sudoku[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
+                cv2.putText(blank_image, str(sudoku_result[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
+
+            warped = cv2.warpPerspective(blank_image, warp_matrix, frame.shape[0:2][::-1])
+
+            # Now create a mask of logo and create its inverse mask also
+            img2gray = cv2.cvtColor(warped,cv2.COLOR_BGR2GRAY)
+            ret, mask = cv2.threshold(img2gray, 10, 255, cv2.THRESH_BINARY)
+            mask_inv = cv2.bitwise_not(mask)
+
+            # Now black-out the area of logo in ROI
+            bg = cv2.bitwise_and(frame, frame, mask = mask_inv)
+
+            # Take only region of logo from logo image.
+            fg = cv2.bitwise_and(warped,warped,mask = mask)
+
+            # Put logo in ROI and modify the main image
+            merged = cv2.add(bg, fg)
+
+            display_image = merged
+
+
+        # display merged
+        # output = cv2.cvtColor(merged, cv2.COLOR_BGR2RGB)
+        # h, w, ch = output.shape
+        # bytesPerLine = ch * w
+        # convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
+        # outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+    
+    else:  # no sudoku found
+        empty_counter += 1
+        if empty_counter > 10:
+            sudoku_solved = False
+            sudoku_result = None
+            empty_pos_g = []
+
+
+
+    rgbImage = cv2.cvtColor(display_image, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
     bytesPerLine = ch * w
     convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
@@ -88,68 +192,8 @@ def display_frame():
     # print input image
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
-    if not (extraction_result is None):
-        unwarped, warp_matrix = extraction_result
-        # extract individual digits
-        digits = []
-        digit_pos = []
-        empty_pos = []
-        for y in range(9):
-            for x in range(9):
-                # determine if tile contains digit
-                stddev = (
-                    calc_stddev(
-                        extract_detector_region(unwarped, (x, y))))
-
-                # stddev:
-                # - empty: [35, 145]
-                # - digit: [1458, 2103]
-
-                if stddev >= 800: # contains digit
-                    cnn_input = (
-                        post_process_cnn_input(
-                            extract_cnn_input(unwarped, (x, y))))
-                
-                    digits.append( cnn_input )
-                    digit_pos.append( (x, y) )
-                    # save_cnn_input(cnn_input)
-                else:   # empty
-                    empty_pos.append( (x, y) )
 
 
-        predictions = digit.predict_multiple(digits)
-        reconstructed_sudoku = np.zeros((9, 9), dtype=np.int)
-        for (value, (x, y)) in zip(predictions, digit_pos):
-            reconstructed_sudoku[y, x] = value
-
-        # print(reconstructed_sudoku)
-        solve_succes = sudoku_solver.solve_sudoku(reconstructed_sudoku)
-        
-        blank_image = np.zeros(unwarped.shape, np.uint8)
-        if solve_succes:
-            for (x, y) in empty_pos:
-                x_ = int(x * (576 / 9) +12)
-                y_ = int(y * (576 / 9) +40 +(8-y)*1)
-                cv2.putText(unwarped, str(reconstructed_sudoku[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
-                cv2.putText(blank_image, str(reconstructed_sudoku[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
-
-        warped = cv2.warpPerspective(blank_image, warp_matrix, frame.shape[0:2][::-1])
-
-
-
-        blended_result = cv2.add(frame, warped)
-
-
-
-        # display unwarped
-        output = cv2.cvtColor(blended_result, cv2.COLOR_BGR2RGB)
-        h, w, ch = output.shape
-        bytesPerLine = ch * w
-        convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
-        outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
-
-
-        
 
 def display_frame_debug():
     ret, frame = cap.read()
@@ -200,7 +244,7 @@ button.clicked.connect(sys.exit) # quiter button
 # setup grid layout
 grid = QGridLayout()
 grid.addWidget(inputImageBox,0,0)
-grid.addWidget(outputImageBox,0,1)
+# grid.addWidget(outputImageBox,0,1)
 grid.addWidget(button, 1,0)
 
 window.setLayout(grid)
