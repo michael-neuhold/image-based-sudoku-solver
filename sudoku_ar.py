@@ -10,6 +10,8 @@ import os
 from sudoku_lib import sudoku
 from digit_recognition import digit
 
+from backtracking import sudoku_solver
+
 
 dirname  = os.path.dirname(__file__)
 input_dir = os.path.join(dirname, 'images', 'input')
@@ -76,7 +78,7 @@ def display_frame():
     ret, frame = cap.read()
 
     # extract sudoku
-    unwarped = sudoku.extract_with_bound(frame)
+    extraction_result = sudoku.extract_with_bound(frame)
 
     rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
@@ -86,10 +88,12 @@ def display_frame():
     # print input image
     inputImageBox.setPixmap(QPixmap.fromImage(p))
 
-    if not (unwarped is None):
+    if not (extraction_result is None):
+        unwarped, warp_matrix = extraction_result
         # extract individual digits
         digits = []
         digit_pos = []
+        empty_pos = []
         for y in range(9):
             for x in range(9):
                 # determine if tile contains digit
@@ -109,21 +113,43 @@ def display_frame():
                     digits.append( cnn_input )
                     digit_pos.append( (x, y) )
                     # save_cnn_input(cnn_input)
+                else:   # empty
+                    empty_pos.append( (x, y) )
+
 
         predictions = digit.predict_multiple(digits)
         reconstructed_sudoku = np.zeros((9, 9), dtype=np.int)
         for (value, (x, y)) in zip(predictions, digit_pos):
             reconstructed_sudoku[y, x] = value
 
-        print(reconstructed_sudoku)
-        print()
+        # print(reconstructed_sudoku)
+        solve_succes = sudoku_solver.solve_sudoku(reconstructed_sudoku)
+        
+        blank_image = np.zeros(unwarped.shape, np.uint8)
+        if solve_succes:
+            for (x, y) in empty_pos:
+                x_ = int(x * (576 / 9) +12)
+                y_ = int(y * (576 / 9) +40 +(8-y)*1)
+                cv2.putText(unwarped, str(reconstructed_sudoku[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
+                cv2.putText(blank_image, str(reconstructed_sudoku[y, x]), (x_, y_), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (0, 255, 0), 6)
+
+        warped = cv2.warpPerspective(blank_image, warp_matrix, frame.shape[0:2][::-1])
+
+
+
+        blended_result = cv2.add(frame, warped)
+
+
 
         # display unwarped
-        output = cv2.cvtColor(unwarped, cv2.COLOR_BGR2RGB)
+        output = cv2.cvtColor(blended_result, cv2.COLOR_BGR2RGB)
         h, w, ch = output.shape
         bytesPerLine = ch * w
         convertToQtFormat = QImage(output.data, w, h, bytesPerLine, QImage.Format_RGB888)
         outputImageBox.setPixmap(QPixmap.fromImage(convertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)))
+
+
+        
 
 def display_frame_debug():
     ret, frame = cap.read()

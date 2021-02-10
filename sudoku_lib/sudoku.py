@@ -46,11 +46,13 @@ def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None
         
     # Apply Perspective Transform Algorithm 
     matrix = cv2.getPerspectiveTransform(pts1, pts2) 
+    inv_matrix = cv2.getPerspectiveTransform(pts2, pts1) 
+
     unwarped = cv2.warpPerspective(img, matrix, (576, 576))
 
     debug_output and cv2.imwrite(os.path.join(debug_output, debug_filename or 'done.jpg'), unwarped)
 
-    return unwarped
+    return unwarped, inv_matrix
 
 
 
@@ -170,10 +172,10 @@ def extract_with_bound(input_img):
     if len(oriented_corners) != 4:
         return None
 
-    unwarped = unwarp(oriented_corners, scalef, input_img)
+    unwarped, warp_matrix = unwarp(oriented_corners, scalef, input_img)
     render_bound(input_img, oriented_corners, scalef)
 
-    return unwarped
+    return unwarped, warp_matrix
 
 
 
