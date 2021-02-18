@@ -5,7 +5,7 @@ Parameter:
   board:[][]int The sudoku board to solve
   
 Returns:
-  int, int The row and column of the next empty position
+  (int, int) The row and column of the next empty position
            or None, None if none was found
 """
 def get_next_empty_position(board):
