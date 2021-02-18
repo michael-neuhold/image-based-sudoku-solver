@@ -14,15 +14,35 @@ from backtracking import sudoku_solver
 
 
 def render_image(img):
+    """
+    displays an image on the renderTarget (= "main window")
+
+    Parameter:
+        img: [][]numpy_array the image to display
+    """
     rgbImage = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
     bytesPerLine = ch * w
     convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
     p = convertToQtFormat.scaled(1280, 720, Qt.KeepAspectRatio)
-    inputImageBox.setPixmap(QPixmap.fromImage(p))
+    renderTarget.setPixmap(QPixmap.fromImage(p))
 
 
 def find_digits(sudoku_img) -> Tuple:
+    """
+    iterates over a rectified/unwarped image of a sudoku
+    and finds the digits and their positions in the sudoku.
+
+    Parameter:
+      sudoku_img: [][]numpy_array the image in which to search for digits
+
+    Returns:
+      ([ [][]numpy_array ], [ (int, int) ], [ (int, int) ]) 
+        First: extracted sudoku digits
+	    Second: positions of digits
+	    Third: positions of empty sudoku-fields
+    """
+
     digits = []
     digit_pos = []
     empty_pos = []
@@ -133,15 +153,13 @@ timer.timeout.connect(display_frame)
 timer.start(33) # 30fps
 
 # setup ui elements
-inputImageBox = QLabel('Input Image')
-# outputImageBox = QLabel('Output Image')
+renderTarget = QLabel('Render-Target')
 button = QPushButton("Exit")
 button.clicked.connect(sys.exit) # quiter button 
 
 # setup grid layout
 grid = QGridLayout()
-grid.addWidget(inputImageBox,0,0)
-# grid.addWidget(outputImageBox,0,1)
+grid.addWidget(renderTarget,0,0)
 grid.addWidget(button, 1,0)
 
 window.setLayout(grid)
