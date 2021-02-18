@@ -1,4 +1,13 @@
+"""
+Returns the row and column of the next empty cell
 
+Parameter:
+  board:[][]int The sudoku board to solve
+  
+Returns:
+  int, int The row and column of the next empty position
+           or None, None if none was found
+"""
 def get_next_empty_position(board):
     for row in range(9):
         for col in range(9):
@@ -6,19 +15,50 @@ def get_next_empty_position(board):
                 return row, col
     return None, None
 
+"""
+Checks if guess is already in chosen row
 
-def is_valid_row(board, row, col, guess):
+Parameter:
+  board:[][]int The sudoku board to check
+  row: int Row to check
+  guess: The value to check for
+  
+Returns:
+  bool 
+"""
+def is_valid_row(board, row, guess):
     if(guess in board[row]):
         return False
     return True
 
+"""
+Checks if guess is already in chosen column
 
-def is_valid_col(board, row, col, guess):
+Parameter:
+  board:[][]int The sudoku board to check
+  col: int Column to check
+  guess: The value to check for
+  
+Returns:
+  bool 
+"""
+def is_valid_col(board, col, guess):
     if guess in [board[i][col] for i in range(9)]:
         return False
     return True
 
+"""
+Checks if guess is already in chosen box
 
+Parameter:
+  board:[][]int The sudoku board to check
+  row: int Row to check
+  col: int Column to check
+  guess: The value to check for
+  
+Returns:
+  bool 
+"""
 def is_valid_box(board, row, col, guess):
 
     first_col = (col // 3) * 3
@@ -30,23 +70,55 @@ def is_valid_box(board, row, col, guess):
                 return False
     return True
 
+"""
+Checks if guess is valid in board
 
+Parameter:
+  board:[][]int The sudoku board to check
+  row: int Row to check
+  col: int Column to check
+  guess: The value to check for
+  
+Returns:
+  bool 
+"""
 def check_guess(board, row, col, guess):
     return (is_valid_box(board, row, col, guess) and
-            is_valid_col(board, row, col, guess) and
-            is_valid_row(board, row, col, guess))
+            is_valid_col(board, col, guess) and
+            is_valid_row(board, row, guess))
 
+"""
+Solves given Sudoku via backtracking
 
+Parameter:
+  board:[][]int The sudoku board to solve
+  
+Returns:
+  (bool,[][]int) The boolean indicates if a solution was found and 
+                 the 2D field is the filled in sudoku 
+"""
 rec_count = 0
 def solve_sudoku(board):
     global rec_count
     rec_count = 0
     return solve_sudoku_rec(board)
 
+"""
+Recursively andvances trough sudoku to solve it.
+Maximum recursion depth can be adjusted trough MAX_REC_DEPTH
+
+Parameter:
+  board:[][]int The sudoku board to solve
+  
+Returns:
+  (bool,[][]int) The boolean indicates if a solution was found and 
+                 the 2D field is the filled in sudoku 
+"""
+MAX_REC_DEPTH = 50000
 def solve_sudoku_rec(board):
     global rec_count
     rec_count += 1
-    if (rec_count > 50000):
+    if (rec_count > MAX_REC_DEPTH):
         # end prematurely
         return (False, rec_count)
 
@@ -65,7 +137,12 @@ def solve_sudoku_rec(board):
 
     return (False, rec_count)
 
+"""
+Prints Sudoku
 
+Parameter:
+  board:[][]int The sudoku board to print
+"""
 def print_board(board):
     print("\n-------------------------")
     for row in range(9):
@@ -78,14 +155,10 @@ def print_board(board):
             print("\n-------------------------")
         else:
             print()
-
-
-
-
-
-
-
-
+			
+"""
+Tests backtracking with hardcoded Sudoku
+"""
 if __name__ == '__main__':
     board = [
         [6, 0, 0, 0, 7, 1, 0, 0, 0],
