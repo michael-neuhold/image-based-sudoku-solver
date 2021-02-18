@@ -1,3 +1,4 @@
+def get_next_empty_position(board):
 """
 Returns the row and column of the next empty cell
 
@@ -8,13 +9,13 @@ Returns:
   (int, int) The row and column of the next empty position
            or None, None if none was found
 """
-def get_next_empty_position(board):
     for row in range(9):
         for col in range(9):
             if(board[row][col] == 0):
                 return row, col
     return None, None
 
+def is_valid_row(board, row, guess):
 """
 Checks if guess is already in chosen row
 
@@ -26,11 +27,11 @@ Parameter:
 Returns:
   bool 
 """
-def is_valid_row(board, row, guess):
     if(guess in board[row]):
         return False
     return True
 
+def is_valid_col(board, col, guess):
 """
 Checks if guess is already in chosen column
 
@@ -42,11 +43,11 @@ Parameter:
 Returns:
   bool 
 """
-def is_valid_col(board, col, guess):
     if guess in [board[i][col] for i in range(9)]:
         return False
     return True
 
+def is_valid_box(board, row, col, guess):
 """
 Checks if guess is already in chosen box
 
@@ -59,7 +60,6 @@ Parameter:
 Returns:
   bool 
 """
-def is_valid_box(board, row, col, guess):
 
     first_col = (col // 3) * 3
     first_row = (row // 3) * 3
@@ -70,6 +70,7 @@ def is_valid_box(board, row, col, guess):
                 return False
     return True
 
+def check_guess(board, row, col, guess):
 """
 Checks if guess is valid in board
 
@@ -82,11 +83,12 @@ Parameter:
 Returns:
   bool 
 """
-def check_guess(board, row, col, guess):
     return (is_valid_box(board, row, col, guess) and
             is_valid_col(board, col, guess) and
             is_valid_row(board, row, guess))
 
+rec_count = 0
+def solve_sudoku(board):
 """
 Solves given Sudoku via backtracking
 
@@ -97,12 +99,12 @@ Returns:
   (bool,[][]int) The boolean indicates if a solution was found and 
                  the 2D field is the filled in sudoku 
 """
-rec_count = 0
-def solve_sudoku(board):
     global rec_count
     rec_count = 0
     return solve_sudoku_rec(board)
 
+MAX_REC_DEPTH = 50000
+def solve_sudoku_rec(board):
 """
 Recursively andvances trough sudoku to solve it.
 Maximum recursion depth can be adjusted trough MAX_REC_DEPTH
@@ -114,8 +116,6 @@ Returns:
   (bool,[][]int) The boolean indicates if a solution was found and 
                  the 2D field is the filled in sudoku 
 """
-MAX_REC_DEPTH = 50000
-def solve_sudoku_rec(board):
     global rec_count
     rec_count += 1
     if (rec_count > MAX_REC_DEPTH):
@@ -137,13 +137,13 @@ def solve_sudoku_rec(board):
 
     return (False, rec_count)
 
+def print_board(board):
 """
 Prints Sudoku
 
 Parameter:
   board:[][]int The sudoku board to print
 """
-def print_board(board):
     print("\n-------------------------")
     for row in range(9):
         print("|", end="")
