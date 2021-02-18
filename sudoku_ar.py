@@ -42,7 +42,7 @@ def find_digits(sudoku_img) -> Tuple:
 	    Second: positions of digits
 	    Third: positions of empty sudoku-fields
     """
-
+    
     digits = []
     digit_pos = []
     empty_pos = []

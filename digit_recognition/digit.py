@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
 
-"""
-Tests digit recognition model
-Testfile needs to be named 'test8.png'
-Predictionmodel needs to be named 'model.h5'
-"""
 if __name__ == '__main__':
+    """
+    Tests digit recognition model
+    Testfile needs to be named 'test8.png'
+    Predictionmodel needs to be named 'model.h5'
+    """
     import os
     dirname = os.path.dirname(__file__)
 
@@ -43,15 +43,15 @@ dirname = os.path.dirname(__file__)
 model = load_model(os.path.join(dirname, 'model.h5'))
 
 def predict_multiple(images):
-"""
-Predicts digits of images
+    """
+    Predicts digits of images
 
-Paramater:
-  images List of images which should be predicted
-  
-Returns:
-  []int Predicted numbers
-"""
+    Paramater:
+    images List of images which should be predicted
+    
+    Returns:
+    []int Predicted numbers
+    """
     if len(images) == 0:
         return []
 

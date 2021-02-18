@@ -15,20 +15,20 @@ kernel3 = (
     ], dtype=np.uint8))
 
 def extract_sudoku_component(img, debug_output=None, debug_filename=None) -> Tuple:
-"""
-Extracts Sudoku from an image using openCV
+    """
+    Extracts Sudoku from an image using openCV
 
-Parameter:
-  img: [][]numpy_array The image from which to extract the Sudoku
-  debug_output: String Path where to save the processed image
-  debug_filename: String Filename of the processed image
-  
-Returns:
-  ([][]numpy_array, (float, float), float) 
-    First: extracted Sudoku
-	Second: Size of extracted Sudoku
-	Third: Scaling factor
-"""
+    Parameter:
+    img: [][]numpy_array The image from which to extract the Sudoku
+    debug_output: String Path where to save the processed image
+    debug_filename: String Filename of the processed image
+    
+    Returns:
+    ([][]numpy_array, (float, float), float) 
+        First: extracted Sudoku
+        Second: Size of extracted Sudoku
+        Third: Scaling factor
+    """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray, scalef1 = prep.downsample(gray, 480)
     norm = prep.normalize(gray)
@@ -46,22 +46,22 @@ Returns:
     return result, component_size * scalef * scalef, scalef
 
 def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None):
-"""
-Unwarps perspective of Sudoku using openCV
+    """
+    Unwarps perspective of Sudoku using openCV
 
-Parameter:
-  oriented_corners The corners of the Sudoku
-  scalef: float Scaling factor if img
-  img: [][]numpy_array Original image
-  debug_output: String Path where to save the processed image
-  debug_filename: String Filename of the processed image
-  
-Returns:
-  ([][]numpy_array, (float, float), float) 
-    First: extracted Sudoku
-	Second: Size of extracted Sudoku
-	Third: Scaling factor
-"""
+    Parameter:
+    oriented_corners The corners of the Sudoku
+    scalef: float Scaling factor if img
+    img: [][]numpy_array Original image
+    debug_output: String Path where to save the processed image
+    debug_filename: String Filename of the processed image
+    
+    Returns:
+    ([][]numpy_array, (float, float), float) 
+        First: extracted Sudoku
+        Second: Size of extracted Sudoku
+        Third: Scaling factor
+    """
     pts2 = np.float32([
                 [576-1, 576-1],
                 [0, 576-1],
@@ -83,15 +83,15 @@ Returns:
     return unwarped, inv_matrix
 
 def render_lines(img, lines, scalef, color=(255,255,255)):
-"""
-Draws lines into img
+    """
+    Draws lines into img
 
-Parameter:
-  img: [][]numpy_array Image containing recognized Sudoku
-  lines Container of coordinates of the lines to draw
-  scalef: float Scaling factor of img
-  color: (int, int, int) Color of the lines
-"""
+    Parameter:
+    img: [][]numpy_array Image containing recognized Sudoku
+    lines Container of coordinates of the lines to draw
+    scalef: float Scaling factor of img
+    color: (int, int, int) Color of the lines
+    """
     # render lines (debug)
     for line in lines:
         rho, theta = line[0]
@@ -110,28 +110,28 @@ Parameter:
     # cv2.imwrite(os.path.join(DEBUG_OUTPUT, 'applied_hough.jpg'), img)
 
 def render_corners(img, corners, scalef):
-"""
-Highlights corners of the recognized Sudoku
+    """
+    Highlights corners of the recognized Sudoku
 
-Parameter:
-  img: [][]numpy_array Image containing recognized Sudoku
-  corners Container of coordinates of the corners of the Sudoku
-  scalef: float Scaling factor of img
-"""
+    Parameter:
+    img: [][]numpy_array Image containing recognized Sudoku
+    corners Container of coordinates of the corners of the Sudoku
+    scalef: float Scaling factor of img
+    """
     cv2.circle(img, (int((corners[0][0]+0.5)/scalef), int((corners[0][1]+0.5)/ scalef)), 3, color=(255,0,0), thickness=5)
     cv2.circle(img, (int((corners[1][0]+0.5)/scalef), int((corners[1][1]+0.5)/ scalef)), 3, color=(0,255,0), thickness=5)
     cv2.circle(img, (int((corners[2][0]+0.5)/scalef), int((corners[2][1]+0.5)/ scalef)), 3, color=(0,0,255), thickness=5)
     cv2.circle(img, (int((corners[3][0]+0.5)/scalef), int((corners[3][1]+0.5)/ scalef)), 3, color=(0,0,0), thickness=5)
 
 def render_bound(img, corners, scalef):
-"""
-Highlights borders of the recognized Sudoku
+    """
+    Highlights borders of the recognized Sudoku
 
-Parameter:
-  img: [][]numpy_array Image containing recognized Sudoku
-  corners Container of coordinates of the corners of the Sudoku
-  scalef: float Scaling factor of img
-"""
+    Parameter:
+    img: [][]numpy_array Image containing recognized Sudoku
+    corners Container of coordinates of the corners of the Sudoku
+    scalef: float Scaling factor of img
+    """
     for i in range(len(corners)):
         j = (i + 1) % 4
 
@@ -143,17 +143,17 @@ Parameter:
         cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
 def extract(input_img, debug_stage=None):
-"""
-Extracts Sudoku and unwarps it
+    """
+    Extracts Sudoku and unwarps it
 
-Parameter:
-  input_img: [][]numpy_array Image containing Sudoku
-  debug_stage: String String for testing purpose, possible values are 
-               'component', 'hough', 'hough-filtered', 'corners', 'bound'
-			   
-Returns:
-  [][]numpy_array The processed Image
-"""
+    Parameter:
+    input_img: [][]numpy_array Image containing Sudoku
+    debug_stage: String String for testing purpose, possible values are 
+                'component', 'hough', 'hough-filtered', 'corners', 'bound'
+                
+    Returns:
+    [][]numpy_array The processed Image
+    """
     component, component_size, scalef = extract_sudoku_component(input_img)
 
     # calc_component_bound
@@ -206,12 +206,12 @@ Returns:
     return unwarped
 
 def extract_with_bound(input_img):
-"""
-Extracts Sudoku, highlights and unwarps it
+    """
+    Extracts Sudoku, highlights and unwarps it
 
-Parameter:
-  input_img: [][]numpy_array Image containing Sudoku
-"""
+    Parameter:
+    input_img: [][]numpy_array Image containing Sudoku
+    """
     component, component_size, scalef = extract_sudoku_component(input_img)
 
     # calc_component_bound
@@ -241,11 +241,11 @@ Parameter:
     return unwarped, warp_matrix
 
 
-"""
-Tests extracting a Sudoku from an Inmage
-Usage: sudoku.py <number>
-"""
 if __name__ == '__main__':
+    """
+    Tests extracting a Sudoku from an Inmage
+    Usage: sudoku.py <number>
+    """
     import os
     import time
     import argparse
