@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 
-
+"""
+Tests digit recognition model
+Testfile needs to be named 'test8.png'
+Predictionmodel needs to be named 'model.h5'
+"""
 if __name__ == '__main__':
     import os
     dirname = os.path.dirname(__file__)
@@ -19,7 +23,7 @@ if __name__ == '__main__':
 
     #perform the prediction
     from keras.models import load_model
-    model = load_model(os.path.join(dirname, 'claudschiIsSupiii_pls.h5'))
+    model = load_model(os.path.join(dirname, 'model.h5'))
 
 
     import time
@@ -33,13 +37,21 @@ if __name__ == '__main__':
     print(end - start)
 
 
-
 from keras.models import load_model
 import os
 dirname = os.path.dirname(__file__)
-model = load_model(os.path.join(dirname, 'claudschiIsSupiii_pls.h5'))
+model = load_model(os.path.join(dirname, 'model.h5'))
 
 def predict_multiple(images):
+"""
+Predicts digits of images
+
+Paramater:
+  images List of images which should be predicted
+  
+Returns:
+  []int Predicted numbers
+"""
     if len(images) == 0:
         return []
 
