@@ -55,7 +55,6 @@ def unwarp(oriented_corners, scalef, img, debug_output=None, debug_filename=None
     return unwarped, inv_matrix
 
 
-
 def render_lines(img, lines, scalef, color=(255,255,255)):
     # render lines (debug)
     for line in lines:

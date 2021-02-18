@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     #perform the prediction
     from keras.models import load_model
-    model = load_model(os.path.join(dirname, 'claudschiIsSupiii.h5'))
+    model = load_model(os.path.join(dirname, 'claudschiIsSupiii_pls.h5'))
 
 
     import time
