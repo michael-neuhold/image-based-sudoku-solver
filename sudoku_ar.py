@@ -14,12 +14,12 @@ from backtracking import sudoku_solver
 
 
 def render_image(img):
-"""
-Renders img in UI
+    """
+    Renders img in UI
 
-Parameter:
-  img: [][]numpy_array Image to render
-"""
+    Parameter:
+    img: [][]numpy_array Image to render
+    """
     rgbImage = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
     bytesPerLine = ch * w
@@ -29,18 +29,18 @@ Parameter:
 
 
 def find_digits(sudoku_img) -> Tuple:
-"""
-Detects which cells of Sudoku image contain a number and which are empty
+    """
+    Detects which cells of Sudoku image contain a number and which are empty
 
-Parameter:
-  sudoku_img: [][]numpy_array Image of Sudoku
-  
-Returns:
-  ([][]numpy_array, (int, int), (int, int))
-  First element: Image of the digit
-  Second elemnt: Position of digits
-  Third element: Position of empty cells
-"""
+    Parameter:
+    sudoku_img: [][]numpy_array Image of Sudoku
+    
+    Returns:
+    ([][]numpy_array, (int, int), (int, int))
+    First element: Image of the digit
+    Second elemnt: Position of digits
+    Third element: Position of empty cells
+    """
     digits = []
     digit_pos = []
     empty_pos = []
@@ -71,10 +71,10 @@ Returns:
 
 STATE = SudokuDetectorState()
 def display_frame():
-"""
-Extracts Sudoku from image, unwarps it, divides it into cells, interprets those
-cells via AI Model, solves the Sudoku and displays the result.
-"""
+    """
+    Extracts Sudoku from image, unwarps it, divides it into cells, interprets those
+    cells via AI Model, solves the Sudoku and displays the result.
+    """
     global STATE
 
     ret, frame = cap.read()
