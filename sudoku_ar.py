@@ -14,35 +14,33 @@ from backtracking import sudoku_solver
 
 
 def render_image(img):
-    """
-    displays an image on the renderTarget (= "main window")
+"""
+Renders img in UI
 
-    Parameter:
-        img: [][]numpy_array the image to display
-    """
+Parameter:
+  img: [][]numpy_array Image to render
+"""
     rgbImage = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     h, w, ch = rgbImage.shape
     bytesPerLine = ch * w
     convertToQtFormat = QImage(rgbImage.data, w, h, bytesPerLine, QImage.Format_RGB888)
     p = convertToQtFormat.scaled(1280, 720, Qt.KeepAspectRatio)
-    renderTarget.setPixmap(QPixmap.fromImage(p))
+    inputImageBox.setPixmap(QPixmap.fromImage(p))
 
 
 def find_digits(sudoku_img) -> Tuple:
-    """
-    iterates over a rectified/unwarped image of a sudoku
-    and finds the digits and their positions in the sudoku.
+"""
+Detects which cells of Sudoku image contain a number and which are empty
 
-    Parameter:
-      sudoku_img: [][]numpy_array the image in which to search for digits
-
-    Returns:
-      ([ [][]numpy_array ], [ (int, int) ], [ (int, int) ]) 
-        First: extracted sudoku digits
-	    Second: positions of digits
-	    Third: positions of empty sudoku-fields
-    """
-    
+Parameter:
+  sudoku_img: [][]numpy_array Image of Sudoku
+  
+Returns:
+  ([][]numpy_array, (int, int), (int, int))
+  First element: Image of the digit
+  Second elemnt: Position of digits
+  Third element: Position of empty cells
+"""
     digits = []
     digit_pos = []
     empty_pos = []
@@ -73,6 +71,10 @@ def find_digits(sudoku_img) -> Tuple:
 
 STATE = SudokuDetectorState()
 def display_frame():
+"""
+Extracts Sudoku from image, unwarps it, divides it into cells, interprets those
+cells via AI Model, solves the Sudoku and displays the result.
+"""
     global STATE
 
     ret, frame = cap.read()
@@ -138,7 +140,10 @@ def display_frame():
     render_image(display_image)
 
 
-
+"""
+Basic setup of video capture, timer and UI.
+Starts UI at the end.
+"""
 app = QApplication([])
 window = QWidget()
 
@@ -153,13 +158,15 @@ timer.timeout.connect(display_frame)
 timer.start(33) # 30fps
 
 # setup ui elements
-renderTarget = QLabel('Render-Target')
+inputImageBox = QLabel('Input Image')
+# outputImageBox = QLabel('Output Image')
 button = QPushButton("Exit")
 button.clicked.connect(sys.exit) # quiter button 
 
 # setup grid layout
 grid = QGridLayout()
-grid.addWidget(renderTarget,0,0)
+grid.addWidget(inputImageBox,0,0)
+# grid.addWidget(outputImageBox,0,1)
 grid.addWidget(button, 1,0)
 
 window.setLayout(grid)
