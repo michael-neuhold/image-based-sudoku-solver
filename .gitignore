@@ -136,7 +136,7 @@ sudoku-solver.code-workspace
 # images
 images/
 *.jpg
-*.png
+#*.png
 
 # vscode-settings
 .vscode/
